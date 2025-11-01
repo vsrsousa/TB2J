@@ -56,14 +56,13 @@ python run_paoflow2J.py
 
 #### Using Command Line:
 
-For collinear calculations:
+For collinear calculations (default):
 ```bash
 paoflow2J.py \
-    --hr_fname hamiltonian.dat_0 \
-    --hr_dn_fname hamiltonian.dat_1 \
-    --atoms_fname POSCAR \
+    --hr_up hamiltonian.dat_0 \
+    --hr_dn hamiltonian.dat_1 \
+    --poscar POSCAR \
     --elements Fe \
-    --colinear \
     --efermi 0.0 \
     --kmesh 7 7 7 \
     --output_path TB2J_results
@@ -72,9 +71,10 @@ paoflow2J.py \
 For non-collinear calculations:
 ```bash
 paoflow2J.py \
-    --hr_fname hamiltonian.dat \
-    --atoms_fname POSCAR \
+    --hr_up hamiltonian.dat \
+    --poscar POSCAR \
     --elements Fe \
+    --non_colinear \
     --efermi 0.0 \
     --kmesh 7 7 7 \
     --output_path TB2J_results
@@ -113,8 +113,8 @@ TB2J_magnon.py --figfname magnon.png
 **Issue**: "hamiltonian.dat_0 not found"
 - **Solution**: Make sure PAOFLOW's `write_Hamiltonian()` was called and completed successfully
 
-**Issue**: "For collinear calculations, hr_dn_fname must be provided"
-- **Solution**: For nspin=2 calculations, both spin channels are required. Use `--hr_fname hamiltonian.dat_0 --hr_dn_fname hamiltonian.dat_1`
+**Issue**: "For collinear calculations, hr_dn must be provided"
+- **Solution**: For nspin=2 calculations, both spin channels are required. Use `--hr_up hamiltonian.dat_0 --hr_dn hamiltonian.dat_1`
 
 **Issue**: Orbital positions mismatch
 - **Solution**: Provide orbital positions explicitly using `--positions_fname` if auto-assignment fails

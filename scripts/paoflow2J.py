@@ -20,25 +20,25 @@ def run_paoflow2J():
     )
     
     parser.add_argument(
-        "--hr_fname",
-        help="Path to PAOFLOW Hamiltonian file. For non-collinear: 'hamiltonian.dat'. "
-             "For collinear: 'hamiltonian.dat_0' (spin up). Default: hamiltonian.dat",
-        default="hamiltonian.dat",
+        "--hr_up",
+        help="Path to spin-up Hamiltonian file. For collinear: 'hamiltonian.dat_0'. "
+             "For non-collinear: 'hamiltonian.dat'. Default: hamiltonian.dat_0",
+        default="hamiltonian.dat_0",
         type=str,
     )
     
     parser.add_argument(
-        "--atoms_fname",
+        "--poscar",
         help="Path to structure file (POSCAR, cif, xyz, etc.) readable by ASE. Default: POSCAR",
         default="POSCAR",
         type=str,
     )
     
     parser.add_argument(
-        "--hr_dn_fname",
+        "--hr_dn",
         help="Path to spin-down Hamiltonian file for collinear calculations. "
-             "Typically 'hamiltonian.dat_1'. Required for --colinear calculations.",
-        default=None,
+             "Typically 'hamiltonian.dat_1'. Default: hamiltonian.dat_1",
+        default="hamiltonian.dat_1",
         type=str,
     )
     
@@ -58,8 +58,8 @@ def run_paoflow2J():
     )
     
     parser.add_argument(
-        "--colinear",
-        help="Use collinear spin mode. PAOFLOW writes separate files for spin up (_0) and spin down (_1).",
+        "--non_colinear",
+        help="Use non-collinear spin mode. By default, collinear mode is used.",
         action="store_true",
         default=False,
     )
@@ -171,19 +171,12 @@ def run_paoflow2J():
         print("ERROR: Please specify magnetic elements using --elements (e.g., --elements Fe Ni)")
         sys.exit(1)
     
-    if args.colinear and args.hr_dn_fname is None:
-        print("ERROR: For collinear calculations, --hr_dn_fname must be specified.")
-        print("PAOFLOW typically writes 'hamiltonian.dat_0' (spin up) and 'hamiltonian.dat_1' (spin down).")
-        print("Use: --hr_fname hamiltonian.dat_0 --hr_dn_fname hamiltonian.dat_1 --colinear")
-        sys.exit(1)
-    
     # Call the main function
     gen_exchange_paoflow(
-        hr_fname=args.hr_fname,
-        atoms_fname=args.atoms_fname,
-        colinear=args.colinear,
-        hr_up_fname=args.hr_fname if args.colinear else None,
-        hr_dn_fname=args.hr_dn_fname,
+        hr_up=args.hr_up,
+        poscar=args.poscar,
+        colinear=not args.non_colinear,
+        hr_dn=args.hr_dn,
         positions_fname=args.positions_fname,
         magnetic_elements=args.elements,
         kmesh=args.kmesh,

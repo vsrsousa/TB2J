@@ -434,11 +434,10 @@ def gen_exchange_gpaw(
 
 
 def gen_exchange_paoflow(
-    hr_fname,
-    atoms_fname,
+    hr_up,
+    poscar,
     colinear=True,
-    hr_up_fname=None,
-    hr_dn_fname=None,
+    hr_dn=None,
     positions_fname=None,
     magnetic_elements=[],
     kmesh=[5, 5, 5],
@@ -465,18 +464,16 @@ def gen_exchange_paoflow(
     
     Parameters
     ----------
-    hr_fname : str
-        Path to PAOFLOW Hamiltonian file (for non-collinear) or spin-up file (for collinear).
-        Typically 'hamiltonian.dat' for non-collinear or 'hamiltonian.dat_0' for spin-up.
-    atoms_fname : str
+    hr_up : str
+        Path to spin-up Hamiltonian file. For collinear: 'hamiltonian.dat_0'.
+        For non-collinear: 'hamiltonian.dat'.
+    poscar : str
         Path to structure file (e.g., POSCAR, cif, xyz) readable by ASE
     colinear : bool
-        True for collinear spin calculation, False for non-collinear/spinor
-    hr_up_fname : str, optional
-        Path to spin-up Hamiltonian (defaults to hr_fname if None)
-    hr_dn_fname : str, optional
-        Path to spin-down Hamiltonian. Required for collinear calculations.
-        Typically 'hamiltonian.dat_1'
+        True for collinear spin calculation (default), False for non-collinear/spinor
+    hr_dn : str, optional
+        Path to spin-down Hamiltonian file. For collinear calculations: 'hamiltonian.dat_1'.
+        Not used for non-collinear calculations.
     positions_fname : str, optional
         Path to file with orbital positions (3 columns: x, y, z in Cartesian).
         If not provided, positions are auto-assigned.
@@ -520,27 +517,24 @@ def gen_exchange_paoflow(
     from TB2J.paoflow_wrapper import PAOFLOWWrapper
     
     # Read atomic structure
-    print(f"Reading atomic structure from {atoms_fname}")
-    atoms = read(atoms_fname)
+    print(f"Reading atomic structure from {poscar}")
+    atoms = read(poscar)
     
-    # Set default filenames for collinear case
     if colinear:
-        if hr_up_fname is None:
-            hr_up_fname = hr_fname
-        if hr_dn_fname is None:
+        if hr_dn is None:
             raise ValueError(
-                "For collinear calculations, hr_dn_fname must be provided. "
+                "For collinear calculations, hr_dn must be provided. "
                 "PAOFLOW typically writes 'hamiltonian.dat_0' (spin up) and "
                 "'hamiltonian.dat_1' (spin down)."
             )
     
     if colinear:
         print("Reading PAOFLOW Hamiltonian: collinear spin.")
-        print(f"Spin up: {hr_up_fname}")
-        print(f"Spin down: {hr_dn_fname}")
+        print(f"Spin up: {hr_up}")
+        print(f"Spin down: {hr_dn}")
         
         tbmodel_up, tbmodel_dn = PAOFLOWWrapper.read_paoflow_collinear(
-            hr_up_fname, hr_dn_fname, atoms, positions_fname
+            hr_up, hr_dn, atoms, positions_fname
         )
         
         basis, _ = auto_assign_basis_name(
@@ -550,8 +544,8 @@ def gen_exchange_paoflow(
         )
         
         description = f""" Input from collinear PAOFLOW data.
- Hamiltonian files: {hr_up_fname} and {hr_dn_fname}.
- Atomic structure: {atoms_fname}.
+ Hamiltonian files: {hr_up} and {hr_dn}.
+ Atomic structure: {poscar}.
  Warning: Please check if the noise level of the Hamiltonian is much smaller than the exchange values.
 \n""" + description
         
@@ -581,10 +575,10 @@ def gen_exchange_paoflow(
         
     else:
         print("Reading PAOFLOW Hamiltonian: non-collinear spin.")
-        print(f"Hamiltonian file: {hr_fname}")
+        print(f"Hamiltonian file: {hr_up}")
         
         tbmodel = PAOFLOWWrapper.read_paoflow_hr(
-            hr_fname, atoms, positions_fname
+            hr_up, atoms, positions_fname
         )
         
         basis, _ = auto_assign_basis_name(
@@ -594,8 +588,8 @@ def gen_exchange_paoflow(
         )
         
         description = f""" Input from non-collinear PAOFLOW data.
- Hamiltonian file: {hr_fname}.
- Atomic structure: {atoms_fname}.
+ Hamiltonian file: {hr_up}.
+ Atomic structure: {poscar}.
  Warning: Please check if the noise level of the Hamiltonian is much smaller than the exchange values.
  Warning: The DMI component parallel to the spin orientation, the Jani which has the component of that orientation should be disregarded
  e.g. if the spins are along z, the xz, yz, zz, zx, zy components and the z component of DMI.

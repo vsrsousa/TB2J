@@ -37,11 +37,11 @@ from TB2J.manager import gen_exchange_paoflow
 
 # Configuration
 config = {
-    'hr_fname': 'hamiltonian.dat_0',        # Spin-up Hamiltonian from PAOFLOW
-    'hr_dn_fname': 'hamiltonian.dat_1',     # Spin-down Hamiltonian from PAOFLOW
-    'atoms_fname': 'POSCAR',                # Structure file
-    'colinear': True,                        # Collinear calculation
-    'magnetic_elements': ['Fe'],             # Magnetic elements (modify as needed)
+    'hr_up': 'hamiltonian.dat_0',           # Spin-up Hamiltonian from PAOFLOW
+    'hr_dn': 'hamiltonian.dat_1',           # Spin-down Hamiltonian from PAOFLOW
+    'poscar': 'POSCAR',                     # Structure file
+    'colinear': True,                       # Collinear calculation (default)
+    'magnetic_elements': ['Fe'],            # Magnetic elements (modify as needed)
     'kmesh': [7, 7, 7],                     # k-point mesh
     'efermi': 0.0,                          # Fermi energy (eV) - PAOFLOW shifts to 0
     'emin': -10.0,                          # Min energy below E_F (eV)

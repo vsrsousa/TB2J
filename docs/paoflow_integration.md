@@ -44,31 +44,31 @@ Ensure you have an atomic structure file readable by ASE (Atomic Simulation Envi
 
 ### 3. Run TB2J Calculation
 
-#### For Non-Collinear Calculations:
+#### For Collinear Calculations (default):
 
 ```bash
 paoflow2J.py \
-    --hr_fname hamiltonian.dat \
-    --atoms_fname POSCAR \
-    --elements Fe Ni \
-    --efermi 0.0 \
+    --hr_up hamiltonian.dat_0 \
+    --hr_dn hamiltonian.dat_1 \
+    --poscar POSCAR \
+    --elements Fe \
     --kmesh 7 7 7 \
+    --efermi 0.0 \
     --emin -10.0 \
     --emax 0.5 \
     --output_path TB2J_results
 ```
 
-#### For Collinear Calculations:
+#### For Non-Collinear Calculations:
 
 ```bash
 paoflow2J.py \
-    --hr_fname hamiltonian.dat_0 \
-    --hr_dn_fname hamiltonian.dat_1 \
-    --atoms_fname POSCAR \
-    --elements Fe \
-    --colinear \
-    --efermi 0.0 \
+    --hr_up hamiltonian.dat \
+    --poscar POSCAR \
+    --elements Fe Ni \
+    --non_colinear \
     --kmesh 7 7 7 \
+    --efermi 0.0 \
     --emin -10.0 \
     --emax 0.5 \
     --output_path TB2J_results
@@ -78,11 +78,11 @@ paoflow2J.py \
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--hr_fname` | Path to Hamiltonian file | hamiltonian.dat |
-| `--atoms_fname` | Path to structure file | POSCAR |
-| `--hr_dn_fname` | Spin-down Hamiltonian (collinear only) | None |
+| `--hr_up` | Path to spin-up Hamiltonian file | hamiltonian.dat_0 |
+| `--poscar` | Path to structure file | POSCAR |
+| `--hr_dn` | Spin-down Hamiltonian (collinear) | hamiltonian.dat_1 |
 | `--elements` | Magnetic elements (e.g., Fe Ni) | Required |
-| `--colinear` | Use collinear mode | False |
+| `--non_colinear` | Use non-collinear mode | False (collinear default) |
 | `--efermi` | Fermi energy (eV) | 0.0 |
 | `--kmesh` | k-point mesh (kx ky kz) | 5 5 5 |
 | `--emin` | Min energy below E_F (eV) | -14.0 |
@@ -140,9 +140,9 @@ You can also use the Python API directly:
 from TB2J.manager import gen_exchange_paoflow
 
 gen_exchange_paoflow(
-    hr_fname='hamiltonian.dat_0',
-    hr_dn_fname='hamiltonian.dat_1',
-    atoms_fname='POSCAR',
+    hr_up='hamiltonian.dat_0',
+    hr_dn='hamiltonian.dat_1',
+    poscar='POSCAR',
     colinear=True,
     magnetic_elements=['Fe'],
     kmesh=[7, 7, 7],
