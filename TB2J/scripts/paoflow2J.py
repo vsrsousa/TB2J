@@ -10,7 +10,6 @@ import argparse
 import sys
 
 from TB2J.exchange_params import add_exchange_args_to_parser, parser_argument_to_dict
-from TB2J.interfaces import gen_exchange_paoflow
 from TB2J.versioninfo import print_license
 
 
@@ -75,6 +74,9 @@ def run_paoflow2J():
         print("Example: paoflow2J.py --efermi 6.15 --elements Mn Fe")
         print("   or:   paoflow2J.py --efermi 6.15 --index_magnetic_atoms 1 2 3")
         sys.exit(1)
+    
+    # Import here to avoid issues with other interfaces
+    from TB2J.interfaces.paoflow_interface import gen_exchange_paoflow
     
     # Convert argument namespace to dictionary for Manager
     kwargs = parser_argument_to_dict(args)
