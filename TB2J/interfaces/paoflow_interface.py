@@ -18,7 +18,7 @@ from ase.io import read
 
 from TB2J.myTB import MyTB
 from TB2J.utils import auto_assign_basis_name
-from TB2J.wannier import parse_atoms, parse_ham
+from TB2J.wannier import parse_ham
 
 from .manager import Manager
 
