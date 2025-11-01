@@ -431,3 +431,199 @@ def gen_exchange_gpaw(
         exchange.run(path=output_path)
         print("\n")
         print(f"All calculation finsihed. The results are in {output_path} directory.")
+
+
+def gen_exchange_paoflow(
+    hr_fname,
+    atoms_fname,
+    colinear=True,
+    hr_up_fname=None,
+    hr_dn_fname=None,
+    positions_fname=None,
+    magnetic_elements=[],
+    kmesh=[5, 5, 5],
+    emin=-12.0,
+    emax=0.0,
+    nz=100,
+    exclude_orbs=[],
+    Rcut=None,
+    ne=None,
+    np=1,
+    efermi=0.0,
+    use_cache=False,
+    output_path="TB2J_results",
+    orb_decomposition=False,
+    write_density_matrix=False,
+    description="",
+):
+    """
+    Calculate exchange parameters from PAOFLOW Hamiltonian output.
+    
+    PAOFLOW writes Hamiltonians in Wannier90-compatible hr.dat format using
+    the write_Hamiltonian() method. This function reads those files and
+    calculates magnetic exchange interactions.
+    
+    Parameters
+    ----------
+    hr_fname : str
+        Path to PAOFLOW Hamiltonian file (for non-collinear) or spin-up file (for collinear).
+        Typically 'hamiltonian.dat' for non-collinear or 'hamiltonian.dat_0' for spin-up.
+    atoms_fname : str
+        Path to structure file (e.g., POSCAR, cif, xyz) readable by ASE
+    colinear : bool
+        True for collinear spin calculation, False for non-collinear/spinor
+    hr_up_fname : str, optional
+        Path to spin-up Hamiltonian (defaults to hr_fname if None)
+    hr_dn_fname : str, optional
+        Path to spin-down Hamiltonian. Required for collinear calculations.
+        Typically 'hamiltonian.dat_1'
+    positions_fname : str, optional
+        Path to file with orbital positions (3 columns: x, y, z in Cartesian).
+        If not provided, positions are auto-assigned.
+    magnetic_elements : list
+        List of magnetic element symbols (e.g., ['Fe', 'Ni'])
+    kmesh : list
+        k-point mesh [kx, ky, kz]
+    emin : float
+        Minimum energy below Fermi level (eV)
+    emax : float
+        Maximum energy above Fermi level (eV)
+    nz : int
+        Number of energy integration steps
+    exclude_orbs : list
+        Orbital indices to exclude from magnetic sites
+    Rcut : float, optional
+        Cutoff distance for exchange interactions
+    ne : int, optional
+        Alternative energy integration parameter
+    np : int
+        Number of parallel processes
+    efermi : float
+        Fermi energy in eV
+    use_cache : bool
+        Whether to cache wavefunctions to disk
+    output_path : str
+        Output directory path
+    orb_decomposition : bool
+        Whether to perform orbital decomposition (non-collinear only)
+    write_density_matrix : bool
+        Whether to write density matrix
+    description : str
+        Description to include in output
+        
+    Returns
+    -------
+    None
+        Results are written to output_path directory
+    """
+    from ase.io import read
+    from TB2J.paoflow_wrapper import PAOFLOWWrapper
+    
+    # Read atomic structure
+    print(f"Reading atomic structure from {atoms_fname}")
+    atoms = read(atoms_fname)
+    
+    # Set default filenames for collinear case
+    if colinear:
+        if hr_up_fname is None:
+            hr_up_fname = hr_fname
+        if hr_dn_fname is None:
+            raise ValueError(
+                "For collinear calculations, hr_dn_fname must be provided. "
+                "PAOFLOW typically writes 'hamiltonian.dat_0' (spin up) and "
+                "'hamiltonian.dat_1' (spin down)."
+            )
+    
+    if colinear:
+        print("Reading PAOFLOW Hamiltonian: collinear spin.")
+        print(f"Spin up: {hr_up_fname}")
+        print(f"Spin down: {hr_dn_fname}")
+        
+        tbmodel_up, tbmodel_dn = PAOFLOWWrapper.read_paoflow_collinear(
+            hr_up_fname, hr_dn_fname, atoms, positions_fname
+        )
+        
+        basis, _ = auto_assign_basis_name(
+            tbmodel_up.xred,
+            atoms,
+            write_basis_file=os.path.join(output_path, "assigned_basis.txt"),
+        )
+        
+        description = f""" Input from collinear PAOFLOW data.
+ Hamiltonian files: {hr_up_fname} and {hr_dn_fname}.
+ Atomic structure: {atoms_fname}.
+ Warning: Please check if the noise level of the Hamiltonian is much smaller than the exchange values.
+\n""" + description
+        
+        print("Starting to calculate exchange.")
+        exchange = ExchangeCL2(
+            tbmodels=(tbmodel_up, tbmodel_dn),
+            atoms=atoms,
+            basis=basis,
+            efermi=efermi,
+            magnetic_elements=magnetic_elements,
+            kmesh=kmesh,
+            emin=emin,
+            emax=emax,
+            nz=nz,
+            exclude_orbs=exclude_orbs,
+            Rcut=Rcut,
+            ne=ne,
+            np=np,
+            use_cache=use_cache,
+            output_path=output_path,
+            write_density_matrix=write_density_matrix,
+            description=description,
+        )
+        exchange.run(path=output_path)
+        print("\n")
+        print(f"All calculation finished. The results are in {output_path} directory.")
+        
+    else:
+        print("Reading PAOFLOW Hamiltonian: non-collinear spin.")
+        print(f"Hamiltonian file: {hr_fname}")
+        
+        tbmodel = PAOFLOWWrapper.read_paoflow_hr(
+            hr_fname, atoms, positions_fname
+        )
+        
+        basis, _ = auto_assign_basis_name(
+            tbmodel.xred,
+            atoms,
+            write_basis_file=os.path.join(output_path, "assigned_basis.txt"),
+        )
+        
+        description = f""" Input from non-collinear PAOFLOW data.
+ Hamiltonian file: {hr_fname}.
+ Atomic structure: {atoms_fname}.
+ Warning: Please check if the noise level of the Hamiltonian is much smaller than the exchange values.
+ Warning: The DMI component parallel to the spin orientation, the Jani which has the component of that orientation should be disregarded
+ e.g. if the spins are along z, the xz, yz, zz, zx, zy components and the z component of DMI.
+ If you need these components, try to do three calculations with spin along x, y, z, or use structure with z rotated to x, y and z. 
+ And then use TB2J_merge.py to get the full set of parameters.
+\n""" + description
+        
+        print("Starting to calculate exchange.")
+        exchange = ExchangeNCL(
+            tbmodels=tbmodel,
+            atoms=atoms,
+            basis=basis,
+            efermi=efermi,
+            magnetic_elements=magnetic_elements,
+            kmesh=kmesh,
+            emin=emin,
+            emax=emax,
+            nz=nz,
+            exclude_orbs=exclude_orbs,
+            Rcut=Rcut,
+            ne=ne,
+            np=np,
+            use_cache=use_cache,
+            description=description,
+            output_path=output_path,
+            write_density_matrix=write_density_matrix,
+            orb_decomposition=orb_decomposition,
+        )
+        exchange.run(path=output_path)
+        print("\n")
+        print(f"All calculation finished. The results are in {output_path} directory.")
