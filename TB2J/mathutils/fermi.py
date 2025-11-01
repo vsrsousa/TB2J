@@ -7,7 +7,7 @@ print(MAX_EXP_ARGUMENT)
 
 
 def fermi(e, mu, width=0.01, nspin=1):
-    """
+    r"""
     the fermi function with spin degeneracy factor.
      .. math::
         f=\\frac{nspin}{\exp((e-\mu)/width)+1} = nspin \\times \\frac{1}{\exp((e-\mu)/width)+1}

@@ -325,7 +325,7 @@ class ExchangeCL2(ExchangeCL):
         GR_dn = self.Gdn.get_GR(self.short_Rlist, energy=e)
 
         # Save diagonal elements of Green's functions for charge and magnetic moment calculation
-        self.save_greens_function_diagonals_collinear(GR_up, GR_dn)
+        G_up_diag_dict, G_dn_diag_dict = self.save_greens_function_diagonals_collinear(GR_up, GR_dn)
 
         # Use vectorized method with fallback to original method
         try:
@@ -334,7 +334,7 @@ class ExchangeCL2(ExchangeCL):
         except Exception as ex:
             print(f"Vectorized method failed: {ex}, falling back to original method")
             Jorb_list, JJ_list = self.get_all_A(GR_up, GR_dn)
-        return dict(Jorb_list=Jorb_list, JJ_list=JJ_list)
+        return dict(Jorb_list=Jorb_list, JJ_list=JJ_list, G_up_diag=G_up_diag_dict, G_dn_diag=G_dn_diag_dict)
 
     def save_greens_function_diagonals_collinear(self, GR_up, GR_dn):
         """
@@ -343,11 +343,15 @@ class ExchangeCL2(ExchangeCL):
 
         :param GR_up: Spin-up Green's function array of shape (nR, nbasis, nbasis)
         :param GR_dn: Spin-down Green's function array of shape (nR, nbasis, nbasis)
+        :returns: Tuple of dictionaries (G_up_diag_dict, G_dn_diag_dict) per atom
         """
         # Only need R=0 for diagonal elements (intra-atomic)
         GR_up_R0 = GR_up[0]  # R=0 spin-up Green's function
         GR_dn_R0 = GR_dn[0]  # R=0 spin-down Green's function
 
+        G_up_diag_dict = {}
+        G_dn_diag_dict = {}
+        
         for iatom in range(len(self.atoms)):
             # Get orbital indices for this atom
             orbi = self.iorb(iatom)
@@ -362,6 +366,11 @@ class ExchangeCL2(ExchangeCL):
 
             self.G_diagonal_up[iatom].append(G_up_diag)
             self.G_diagonal_dn[iatom].append(G_dn_diag)
+            
+            G_up_diag_dict[iatom] = G_up_diag
+            G_dn_diag_dict[iatom] = G_dn_diag
+        
+        return G_up_diag_dict, G_dn_diag_dict
 
     def compute_charge_and_magnetic_moments(self):
         """
@@ -426,6 +435,18 @@ class ExchangeCL2(ExchangeCL):
                 self.get_quantities_per_e, self.contour.path, num_cpus=self.nproc
             )
         for i, result in enumerate(results):
+            # Merge Green's function diagonals from child process
+            if "G_up_diag" in result and "G_dn_diag" in result:
+                # Initialize if needed (for multiprocessing case)
+                if not hasattr(self, "G_diagonal_up"):
+                    self.G_diagonal_up = {iatom: [] for iatom in range(len(self.atoms))}
+                    self.G_diagonal_dn = {iatom: [] for iatom in range(len(self.atoms))}
+                
+                for iatom, G_up_diag in result["G_up_diag"].items():
+                    self.G_diagonal_up[iatom].append(G_up_diag)
+                for iatom, G_dn_diag in result["G_dn_diag"].items():
+                    self.G_diagonal_dn[iatom].append(G_dn_diag)
+            
             Jorb_list = result["Jorb_list"]
             JJ_list = result["JJ_list"]
             for iR in self.R_ijatom_dict:

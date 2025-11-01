@@ -742,7 +742,7 @@ class ExchangeNCL(Exchange):
         GR = self.G.get_GR(self.short_Rlist, energy=e, Gk_all=Gk_all)
 
         # Save diagonal elements of Green's function for charge and magnetic moment calculation
-        self.save_greens_function_diagonals(GR)
+        G_diag_dict = self.save_greens_function_diagonals(GR)
 
         # TODO: define the quantities for one energy.
         # Use vectorized method for better performance
@@ -753,7 +753,7 @@ class ExchangeNCL(Exchange):
         except Exception as e:
             print(f"Vectorized method failed: {e}, falling back to original method")
             AijR, AijR_orb = self.get_all_A(GR)
-        return dict(AijR=AijR, AijR_orb=AijR_orb, mae=mae)
+        return dict(AijR=AijR, AijR_orb=AijR_orb, mae=mae, G_diag=G_diag_dict)
 
     def save_greens_function_diagonals(self, GR):
         """
@@ -761,16 +761,20 @@ class ExchangeNCL(Exchange):
         These will be used to compute charge and magnetic moments.
 
         :param GR: Green's function array of shape (nR, nbasis, nbasis)
+        :returns: Dictionary of diagonal elements per atom
         """
         # Only need R=0 for diagonal elements (intra-atomic)
         GR_R0 = GR[0]  # R=0 Green's function
 
+        G_diag_dict = {}
         for iatom in range(len(self.atoms)):
             # Get orbital indices for this atom
             orbi = self.iorb(iatom)
             # Extract diagonal elements for this atom
             G_diag = np.diag(GR_R0[np.ix_(orbi, orbi)])
             self.G_diagonal[iatom].append(G_diag)
+            G_diag_dict[iatom] = G_diag
+        return G_diag_dict
 
     def compute_charge_and_magnetic_moments(self):
         """
@@ -851,6 +855,11 @@ class ExchangeNCL(Exchange):
             )
 
         for i, result in enumerate(results):
+            # Merge Green's function diagonals from child process
+            if "G_diag" in result:
+                for iatom, G_diag in result["G_diag"].items():
+                    self.G_diagonal[iatom].append(G_diag)
+            
             for iR in self.R_ijatom_dict:
                 R_vec = self.short_Rlist[iR]
                 for iatom, jatom in self.R_ijatom_dict[iR]:
