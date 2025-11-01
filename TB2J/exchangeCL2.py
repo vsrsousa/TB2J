@@ -358,14 +358,6 @@ class ExchangeCL2(ExchangeCL):
             # Extract diagonal elements for this atom
             G_up_diag = np.diag(GR_up_R0[np.ix_(orbi, orbi)])
             G_dn_diag = np.diag(GR_dn_R0[np.ix_(orbi, orbi)])
-
-            # Store both spin channels
-            if not hasattr(self, "G_diagonal_up"):
-                self.G_diagonal_up = {iatom: [] for iatom in range(len(self.atoms))}
-                self.G_diagonal_dn = {iatom: [] for iatom in range(len(self.atoms))}
-
-            self.G_diagonal_up[iatom].append(G_up_diag)
-            self.G_diagonal_dn[iatom].append(G_dn_diag)
             
             G_up_diag_dict[iatom] = G_up_diag
             G_dn_diag_dict[iatom] = G_dn_diag
