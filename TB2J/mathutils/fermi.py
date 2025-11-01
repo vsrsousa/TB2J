@@ -3,7 +3,6 @@ import sys
 import numpy as np
 
 MAX_EXP_ARGUMENT = np.log(sys.float_info.max / 100000)
-print(MAX_EXP_ARGUMENT)
 
 
 def fermi(e, mu, width=0.01, nspin=1):
