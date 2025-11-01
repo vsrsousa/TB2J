@@ -9,6 +9,7 @@ to TB2J's internal format.
 import numpy as np
 import h5py
 from ase import Atoms
+from ase.geometry import Cell
 
 
 def parse_paoflow_hdf5(fname):
@@ -117,7 +118,6 @@ def parse_paoflow_hdf5(fname):
                   pbc=True)
     
     # Convert orbital positions to reduced coordinates
-    from ase.geometry import Cell
     cell_obj = Cell(cell)
     positions = cell_obj.scaled_positions(orbital_pos)
     
