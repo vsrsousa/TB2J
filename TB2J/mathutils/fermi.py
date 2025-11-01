@@ -8,12 +8,13 @@ print(MAX_EXP_ARGUMENT)
 
 def fermi(e, mu, width=0.01, nspin=1):
     """
-    the fermi function.
+    the fermi function with spin degeneracy factor.
      .. math::
-        f=\\frac{nspin}{\exp((e-\mu)/width)+1}
+        f=\\frac{nspin}{\exp((e-\mu)/width)+1} = nspin \\times \\frac{1}{\exp((e-\mu)/width)+1}
 
     :param e,mu,width: e,\mu,width
     :param nspin: spin degeneracy factor (1 for spin-polarized, 2 for non-spin-polarized)
+    :returns: fermi occupation multiplied by nspin for spin degeneracy
     """
     x = (e - mu) / width
     # disable overflow warning
