@@ -404,7 +404,8 @@ class ExchangeCL2(ExchangeCL):
             # Charge: -1/π ∫ Im[G_up + G_dn] dE
             # Take imaginary part first, then integrate
             # G_diags shape: (n_energies, n_orbitals)
-            # We need to integrate along energy axis (axis 0)
+            # self.contour.weights shape: (n_energies,)
+            # np.dot integrates along energy axis, result shape: (n_orbitals,)
             integrated_up = np.dot(self.contour.weights, -np.imag(G_up_diags) / np.pi)
             integrated_dn = np.dot(self.contour.weights, -np.imag(G_dn_diags) / np.pi)
 

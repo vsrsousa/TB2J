@@ -804,7 +804,8 @@ class ExchangeNCL(Exchange):
             # Integrate over energy using the same contour as exchange calculation
             # Charge: -1/π ∫ Im[diag(G)] dE
             # G_diags shape: (n_energies, n_orbitals)
-            # We need to integrate along energy axis (axis 0)
+            # self.contour.weights shape: (n_energies,)
+            # np.dot integrates along energy axis, result shape: (n_orbitals,)
             integrated_diag = np.dot(self.contour.weights, -np.imag(G_diags) / np.pi)
 
             # Sum over orbitals to get total charge
