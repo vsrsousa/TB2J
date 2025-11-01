@@ -10,11 +10,11 @@ import numpy as np
 from pathos.multiprocessing import ProcessPool
 
 from TB2J.kpoints import ir_kpts, monkhorst_pack
+from TB2J.mathutils.fermi import fermi
 
 # Lazy import to avoid requiring HamiltonIO for basic TB2J operations
 # from HamiltonIO.model.occupations import GaussOccupations
 # from HamiltonIO.model.occupations import myfermi as fermi
-# from TB2J.mathutils.fermi import fermi
 
 MAX_EXP_ARGUMENT = np.log(sys.float_info.max)
 
