@@ -22,10 +22,14 @@ PAOflow Output Format
 ---------------------
 
 PAOflow outputs Hamiltonians in Wannier90-compatible ``_hr.dat`` format using the 
-``write_Hamiltonian()`` method. This means:
+``write_Hamiltonian()`` method.
 
-* **You can use the standard** ``wann2J.py`` **command with PAOflow output!**
-* The ``paoflow2J.py`` command is a convenience wrapper with PAOflow-specific defaults
+**Important Difference from Wannier90:**
+
+* **Wannier90** generates: ``prefix_hr.dat`` + ``prefix_centres.xyz`` (orbital positions)
+* **PAOflow** generates: Only ``hamiltonian.dat`` files (no _centres.xyz)
+* TB2J handles this by automatically assigning orbital positions based on atomic positions
+* Since PAOflow uses atomic orbital projections, orbitals are centered on atoms
 
 For collinear calculations, PAOflow generates:
 
@@ -47,44 +51,48 @@ The _hr.dat format contains:
 Running TB2J with PAOflow
 --------------------------
 
-Method 1: Using paoflow2J.py (Recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using paoflow2J.py (Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``paoflow2J.py`` command provides PAOflow-specific defaults:
+The ``paoflow2J.py`` command handles the missing _centres.xyz file automatically:
 
 .. code-block:: bash
 
    paoflow2J.py --path /path/to/paoflow/output \
+                --posfile POSCAR \
                 --efermi 6.15 \
                 --kmesh 5 5 5 \
                 --elements Mn Fe \
                 --emin -10.0 \
                 --emax 0.0
 
+**Note**: The ``--posfile`` argument is **required** for PAOflow (unlike Wannier90) because
+PAOflow's _hr.dat files don't contain atomic structure information.
+
 This automatically looks for ``hamiltonian_0.dat`` and ``hamiltonian_1.dat`` for 
-collinear calculations.
+collinear calculations and assigns orbital positions based on atomic positions.
 
-Method 2: Using wann2J.py (Also Works)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Why Not Use wann2J.py?
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Since PAOflow outputs Wannier90-compatible files, you can use:
+While PAOflow outputs Wannier90-compatible _hr.dat files, **you should use paoflow2J.py instead 
+of wann2J.py** because:
 
-.. code-block:: bash
+1. PAOflow doesn't generate ``_centres.xyz`` files (orbital positions)
+2. PAOflow doesn't generate ``.win`` files (structure information)
+3. ``paoflow2J.py`` handles these missing files by:
+   - Requiring a structure file (``--posfile``)
+   - Automatically assigning orbital positions based on atomic positions
 
-   wann2J.py --path /path/to/paoflow/output \
-             --prefix_up hamiltonian_0 \
-             --prefix_down hamiltonian_1 \
-             --efermi 6.15 \
-             --kmesh 5 5 5 \
-             --elements Mn Fe \
-             --emin -10.0 \
-             --emax 0.0
+Trying to use ``wann2J.py`` directly will fail with "FileNotFoundError" for the missing 
+``_centres.xyz`` or ``.win`` files.
 
 Parameters:
 
 * ``--path`` - Directory containing PAOflow output files
-* ``--prefix_up`` - Prefix for spin-up _hr.dat file (default for paoflow2J.py: ``hamiltonian_0``)
-* ``--prefix_down`` - Prefix for spin-down _hr.dat file (default for paoflow2J.py: ``hamiltonian_1``)
+* ``--posfile`` - Structure file (POSCAR, CIF, etc.) - **REQUIRED** for PAOflow
+* ``--prefix_up`` - Prefix for spin-up _hr.dat file (default: ``hamiltonian_0``)
+* ``--prefix_down`` - Prefix for spin-down _hr.dat file (default: ``hamiltonian_1``)
 * ``--efermi`` - Fermi energy in eV (required)
 * ``--kmesh`` - k-point mesh for integration (default: 5 5 5)
 * ``--elements`` - Magnetic elements (e.g., Mn Fe Ni)
@@ -99,6 +107,7 @@ For non-collinear or spin-orbit coupling calculations:
 .. code-block:: bash
 
    paoflow2J.py --path /path/to/paoflow/output \
+                --posfile POSCAR \
                 --spinor \
                 --efermi 6.15 \
                 --kmesh 5 5 5 \
@@ -109,11 +118,11 @@ For non-collinear or spin-orbit coupling calculations:
 The ``--spinor`` flag indicates a non-collinear calculation. This automatically uses 
 ``--prefix_spinor hamiltonian`` (the default).
 
-Structure File
-~~~~~~~~~~~~~~
+Structure File (Required!)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You need to provide a structure file containing atomic positions. PAOflow's _hr.dat 
-files don't include atomic structure information:
+**Important**: You must always provide a structure file with PAOflow. Unlike Wannier90's 
+``.win`` files, PAOflow's _hr.dat files don't include atomic structure information:
 
 .. code-block:: bash
 
@@ -217,24 +226,36 @@ Tips and Troubleshooting
 Comparison with Wannier90
 --------------------------
 
-PAOflow vs Wannier90:
+PAOflow vs Wannier90 for TB2J:
 
-+------------------------+--------------------------------+---------------------------+
-| Feature                | Wannier90                      | PAOflow                   |
-+========================+================================+===========================+
-| Output format          | Text files (_hr.dat)           | Same (_hr.dat)            |
-+------------------------+--------------------------------+---------------------------+
-| Orbital construction   | Maximally localized WFs        | Projected atomic orbitals |
-+------------------------+--------------------------------+---------------------------+
-| Interface in TB2J      | ``wann2J.py``                  | ``paoflow2J.py`` or       |
-|                        |                                | ``wann2J.py``             |
-+------------------------+--------------------------------+---------------------------+
-| Structure info         | Included in .win file          | Separate file needed      |
-+------------------------+--------------------------------+---------------------------+
++------------------------+--------------------------------+------------------------------+
+| Feature                | Wannier90                      | PAOflow                      |
++========================+================================+==============================+
+| Hamiltonian format     | _hr.dat (text)                 | .dat (same _hr.dat format)   |
++------------------------+--------------------------------+------------------------------+
+| Orbital positions      | _centres.xyz file              | **Not generated**            |
++------------------------+--------------------------------+------------------------------+
+| Structure info         | .win file                      | **Not generated**            |
++------------------------+--------------------------------+------------------------------+
+| Orbital construction   | Maximally localized WFs        | Projected atomic orbitals    |
++------------------------+--------------------------------+------------------------------+
+| TB2J interface         | ``wann2J.py``                  | ``paoflow2J.py`` (required)  |
++------------------------+--------------------------------+------------------------------+
+| Structure file needed  | Optional (reads from .win)     | **Required** (--posfile)     |
++------------------------+--------------------------------+------------------------------+
 
-**Key Point**: PAOflow outputs are **Wannier90-compatible**, so both ``wann2J.py`` and 
-``paoflow2J.py`` work with PAOflow output. The main difference is the orbital construction 
-method (MLWFs vs. PAOs), which may affect localization quality.
+**Key Differences**:
+
+1. **File completeness**: Wannier90 generates complete set (_hr.dat + _centres.xyz + .win), 
+   while PAOflow only generates _hr.dat files
+   
+2. **Orbital positions**: TB2J's ``paoflow2J.py`` automatically assigns orbital positions 
+   based on atomic positions (since PAOflow uses atomic orbital projections)
+   
+3. **Interface requirement**: Must use ``paoflow2J.py`` for PAOflow (``wann2J.py`` will fail 
+   due to missing files)
+
+4. **Localization method**: Different orbital construction may affect localization quality
 
 Advanced Options
 ----------------
