@@ -48,6 +48,7 @@ Ensure you have an atomic structure file readable by ASE (Atomic Simulation Envi
 
 ```bash
 paoflow2J.py \
+    --path output \
     --hr_up hamiltonian.dat_0 \
     --hr_dn hamiltonian.dat_1 \
     --poscar POSCAR \
@@ -59,10 +60,22 @@ paoflow2J.py \
     --output_path TB2J_results
 ```
 
+If files are in the current directory, you can omit `--path`:
+
+```bash
+paoflow2J.py \
+    --hr_up hamiltonian.dat_0 \
+    --hr_dn hamiltonian.dat_1 \
+    --poscar POSCAR \
+    --elements Fe \
+    --kmesh 7 7 7
+```
+
 #### For Non-Collinear Calculations:
 
 ```bash
 paoflow2J.py \
+    --path output \
     --hr_up hamiltonian.dat \
     --poscar POSCAR \
     --elements Fe Ni \
@@ -78,9 +91,10 @@ paoflow2J.py \
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--hr_up` | Path to spin-up Hamiltonian file | hamiltonian.dat_0 |
-| `--poscar` | Path to structure file | POSCAR |
-| `--hr_dn` | Spin-down Hamiltonian (collinear) | hamiltonian.dat_1 |
+| `--path` | Directory containing PAOFLOW output | ./ (current dir) |
+| `--hr_up` | Spin-up Hamiltonian filename | hamiltonian.dat_0 |
+| `--poscar` | Structure filename | POSCAR |
+| `--hr_dn` | Spin-down Hamiltonian filename | hamiltonian.dat_1 |
 | `--elements` | Magnetic elements (e.g., Fe Ni) | Required |
 | `--non_colinear` | Use non-collinear mode | False (collinear default) |
 | `--efermi` | Fermi energy (eV) | 0.0 |

@@ -59,6 +59,7 @@ python run_paoflow2J.py
 For collinear calculations (default):
 ```bash
 paoflow2J.py \
+    --path output \
     --hr_up hamiltonian.dat_0 \
     --hr_dn hamiltonian.dat_1 \
     --poscar POSCAR \
@@ -68,9 +69,20 @@ paoflow2J.py \
     --output_path TB2J_results
 ```
 
+If files are in the current directory:
+```bash
+paoflow2J.py \
+    --hr_up hamiltonian.dat_0 \
+    --hr_dn hamiltonian.dat_1 \
+    --poscar POSCAR \
+    --elements Fe \
+    --kmesh 7 7 7
+```
+
 For non-collinear calculations:
 ```bash
 paoflow2J.py \
+    --path output \
     --hr_up hamiltonian.dat \
     --poscar POSCAR \
     --elements Fe \

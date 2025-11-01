@@ -11,6 +11,7 @@ from TB2J.manager import gen_exchange_paoflow
 from TB2J.versioninfo import print_license
 import sys
 import argparse
+import os
 
 
 def run_paoflow2J():
@@ -20,8 +21,15 @@ def run_paoflow2J():
     )
     
     parser.add_argument(
+        "--path",
+        help="Path to directory containing PAOFLOW output files. Default: current directory",
+        default="./",
+        type=str,
+    )
+    
+    parser.add_argument(
         "--hr_up",
-        help="Path to spin-up Hamiltonian file. For collinear: 'hamiltonian.dat_0'. "
+        help="Filename of spin-up Hamiltonian. For collinear: 'hamiltonian.dat_0'. "
              "For non-collinear: 'hamiltonian.dat'. Default: hamiltonian.dat_0",
         default="hamiltonian.dat_0",
         type=str,
@@ -29,14 +37,14 @@ def run_paoflow2J():
     
     parser.add_argument(
         "--poscar",
-        help="Path to structure file (POSCAR, cif, xyz, etc.) readable by ASE. Default: POSCAR",
+        help="Filename of structure file (POSCAR, cif, xyz, etc.) readable by ASE. Default: POSCAR",
         default="POSCAR",
         type=str,
     )
     
     parser.add_argument(
         "--hr_dn",
-        help="Path to spin-down Hamiltonian file for collinear calculations. "
+        help="Filename of spin-down Hamiltonian for collinear calculations. "
              "Typically 'hamiltonian.dat_1'. Default: hamiltonian.dat_1",
         default="hamiltonian.dat_1",
         type=str,
@@ -171,13 +179,19 @@ def run_paoflow2J():
         print("ERROR: Please specify magnetic elements using --elements (e.g., --elements Fe Ni)")
         sys.exit(1)
     
+    # Construct full paths to files
+    hr_up_path = os.path.join(args.path, args.hr_up)
+    hr_dn_path = os.path.join(args.path, args.hr_dn)
+    poscar_path = os.path.join(args.path, args.poscar)
+    positions_path = os.path.join(args.path, args.positions_fname) if args.positions_fname else None
+    
     # Call the main function
     gen_exchange_paoflow(
-        hr_up=args.hr_up,
-        poscar=args.poscar,
+        hr_up=hr_up_path,
+        poscar=poscar_path,
         colinear=not args.non_colinear,
-        hr_dn=args.hr_dn,
-        positions_fname=args.positions_fname,
+        hr_dn=hr_dn_path,
+        positions_fname=positions_path,
         magnetic_elements=args.elements,
         kmesh=args.kmesh,
         emin=args.emin,
