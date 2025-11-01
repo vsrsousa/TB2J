@@ -403,8 +403,10 @@ class ExchangeCL2(ExchangeCL):
             # Integrate over energy using the same contour as exchange calculation
             # Charge: -1/π ∫ Im[G_up + G_dn] dE
             # Take imaginary part first, then integrate
-            integrated_up = self.contour.integrate_values(-np.imag(G_up_diags) / np.pi, axis=0)
-            integrated_dn = self.contour.integrate_values(-np.imag(G_dn_diags) / np.pi, axis=0)
+            # G_diags shape: (n_energies, n_orbitals)
+            # We need to integrate along energy axis (axis 0)
+            integrated_up = np.dot(self.contour.weights, -np.imag(G_up_diags) / np.pi)
+            integrated_dn = np.dot(self.contour.weights, -np.imag(G_dn_diags) / np.pi)
 
             # Sum over orbitals and spin channels to get total charge
             self.charges[iatom] = np.sum(integrated_up) + np.sum(integrated_dn)
