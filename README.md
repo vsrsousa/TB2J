@@ -12,6 +12,7 @@ The TB2J project is initialized in the PhyTheMa and Nanomat teams in the Univers
 The features include:
  - Calculates  parameters in Heisenberg model, including isotropic exchange, anisotropic exchange, Dyzanoshinskii-Moriya interaction.
  - Can use the input from many DFT codes with Wannier90, e.g. Abinit, Quantum Espresso, Siesta, VASP, etc.
+ - Can use the input from PAOflow, an alternative to Wannier90 for generating tight-binding Hamiltonians.
  - Can use input from DFT codes with numerical orbitals from Siesta, OpenMX and ABACUS.
  - Calculate magnon band structure from the Heisenberg Hamiltonian.
  - Generate input for spin dynamics/Monte Carlo codes MULTIBINIT.

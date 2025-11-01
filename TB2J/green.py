@@ -7,12 +7,13 @@ from collections import defaultdict
 from shutil import rmtree
 
 import numpy as np
-from HamiltonIO.model.occupations import GaussOccupations
-from HamiltonIO.model.occupations import myfermi as fermi
 from pathos.multiprocessing import ProcessPool
 
 from TB2J.kpoints import ir_kpts, monkhorst_pack
 
+# Lazy import to avoid requiring HamiltonIO for basic TB2J operations
+# from HamiltonIO.model.occupations import GaussOccupations
+# from HamiltonIO.model.occupations import myfermi as fermi
 # from TB2J.mathutils.fermi import fermi
 
 MAX_EXP_ARGUMENT = np.log(sys.float_info.max)
@@ -252,6 +253,14 @@ class TBGreen:
             # self.efermi = occ.efermi(copy.deepcopy(self.evals))
             # print(f"Fermi energy found: {self.efermi}")
 
+            try:
+                from HamiltonIO.model.occupations import GaussOccupations
+            except ImportError:
+                raise ImportError(
+                    "HamiltonIO is required for automatic Fermi energy calculation. "
+                    "Please install it with: pip install HamiltonIO\n"
+                    "Or provide --efermi argument explicitly."
+                )
             occ = GaussOccupations(
                 nel=self.tbmodel.nel, width=0.1, wk=self.kweights, nspin=2
             )
