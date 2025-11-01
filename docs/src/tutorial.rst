@@ -5,6 +5,7 @@ Tutorial
    :caption: Contents:
 
    wannier.rst
+   paoflow.rst
    siesta.rst
    openmx.rst
    abacus.rst
