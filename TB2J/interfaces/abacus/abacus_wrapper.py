@@ -318,30 +318,30 @@ class AbacusSplitSOCParser:
         return model
 
 
-# def test_abacus_wrapper_collinear():
-#     outpath = "/Users/hexu/projects/TB2J_abacus/abacus-tb2j-master/abacus_example/case_Fe/1_no_soc/OUT.Fe"
-#     parser = AbacusParser(outpath=outpath, spin=None, binary=False)
-#     atoms = parser.read_atoms()
-#     # atoms=parser.read_atoms_out()
-#     # parser.read_HSR_collinear()
-#     model_up, model_dn = parser.get_models()
-#     H, S, E, V = model_up.HSE_k([0, 0, 0])
-#     # print(H.diagonal().real)
-#     # print(model_up.get_HR0().diagonal().real)
-#     print(parser.efermi)
-#     print(atoms)
+def test_abacus_wrapper_collinear():
+    outpath = "/Users/hexu/projects/TB2J_abacus/abacus-tb2j-master/abacus_example/case_Fe/1_no_soc/OUT.Fe"
+    parser = AbacusParser(outpath=outpath, spin=None, binary=False)
+    atoms = parser.read_atoms()
+    # atoms=parser.read_atoms_out()
+    # parser.read_HSR_collinear()
+    model_up, model_dn = parser.get_models()
+    H, S, E, V = model_up.HSE_k([0, 0, 0])
+    # print(H.diagonal().real)
+    # print(model_up.get_HR0().diagonal().real)
+    print(parser.efermi)
+    print(atoms)
 
 
-# def test_abacus_wrapper_ncl():
-#     outpath = "/Users/hexu/projects/TB2J_abacus/abacus-tb2j-master/abacus_example/case_Fe/2_soc/OUT.Fe"
-#     parser = AbacusParser(outpath=outpath, spin=None, binary=False)
-#     atoms = parser.read_atoms()
-#     model = parser.get_models()
-#     H, S, E, V = model.HSE_k([0, 0, 0])
-#     print(parser.efermi)
-#     print(atoms)
+def test_abacus_wrapper_ncl():
+    outpath = "/Users/hexu/projects/TB2J_abacus/abacus-tb2j-master/abacus_example/case_Fe/2_soc/OUT.Fe"
+    parser = AbacusParser(outpath=outpath, spin=None, binary=False)
+    atoms = parser.read_atoms()
+    model = parser.get_models()
+    H, S, E, V = model.HSE_k([0, 0, 0])
+    print(parser.efermi)
+    print(atoms)
 
 
-# if __name__ == "__main__":
-#     # test_abacus_wrapper()
-#     pass  # test_abacus_wrapper_ncl()
+if __name__ == "__main__":
+    # test_abacus_wrapper()
+    test_abacus_wrapper_ncl()

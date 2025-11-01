@@ -100,12 +100,12 @@ data directory: {outpath}
         print("All calculation finsihed. The results are in TB2J_results directory.")
 
 
-# if __name__ == "__main__":
-#     gen_exchange_abacus(
-#         path="/Users/hexu/projects/TB2J_abacus/abacus-tb2j-master/abacus_example/case_Fe/2_soc",
-#         suffix="Fe",
-#         magnetic_elements=["Fe"],
-#         nz=50,
-#         Rcut=8,
-#         kmesh=[7, 7, 7],
-#     )
+if __name__ == "__main__":
+    gen_exchange_abacus(
+        path="/Users/hexu/projects/TB2J_abacus/abacus-tb2j-master/abacus_example/case_Fe/2_soc",
+        suffix="Fe",
+        magnetic_elements=["Fe"],
+        nz=50,
+        Rcut=8,
+        kmesh=[7, 7, 7],
+    )

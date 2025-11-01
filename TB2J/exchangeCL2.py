@@ -402,17 +402,16 @@ class ExchangeCL2(ExchangeCL):
 
             # Integrate over energy using the same contour as exchange calculation
             # Charge: -1/π ∫ Im[G_up + G_dn] dE
-            integrated_up = -np.imag(self.contour.integrate_values(G_up_diags)) / np.pi
-            integrated_dn = -np.imag(self.contour.integrate_values(G_dn_diags)) / np.pi
+            # Take imaginary part first, then integrate
+            integrated_up = self.contour.integrate_values(-np.imag(G_up_diags) / np.pi, axis=0)
+            integrated_dn = self.contour.integrate_values(-np.imag(G_dn_diags) / np.pi, axis=0)
 
             # Sum over orbitals and spin channels to get total charge
             self.charges[iatom] = np.sum(integrated_up) + np.sum(integrated_dn)
 
             # Magnetic moment (assuming z-direction for collinear case)
             # m_z = -1/π ∫ Im[G_up - G_dn] dE
-            self.spinat[iatom, 2] = np.sum(integrated_up) - np.sum(
-                integrated_dn
-            )  # z-component
+            self.spinat[iatom, 2] = np.sum(integrated_up) - np.sum(integrated_dn)  # z-component
 
         print(f"Computed charges: {self.charges}")
         print(f"Computed magnetic moments (z-component): {self.spinat[:, 2]}")
