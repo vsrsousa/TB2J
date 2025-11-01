@@ -390,7 +390,7 @@ class TBGreen:
         return np.real(np.diag(self.get_density_matrix()))
 
     def get_Gk(self, ik, energy, evals=None, evecs=None):
-        """Green's function G(k) for one energy
+        r"""Green's function G(k) for one energy
         G(\epsilon)= (\epsilon I- H)^{-1}
         :param ik: indices for kpoint
         :returns: Gk
@@ -426,7 +426,7 @@ class TBGreen:
         return GR
 
     def get_GR(self, Rpts, energy, Gk_all=None):
-        """calculate real space Green's function for one energy, all R points.
+        r"""calculate real space Green's function for one energy, all R points.
         G(R, epsilon) = G(k, epsilon) exp(-2\pi i R.dot. k)
         :param Rpts: R points
         :param energy: energy value
@@ -442,7 +442,7 @@ class TBGreen:
         return self.compute_GR(Rpts, self.kpts, Gks)
 
     def get_GR_and_dGRdx1(self, Rpts, energy, dHdx):
-        """
+        r"""
         calculate G(R) and dG(R)/dx.
         dG(R)/dx = \sum_k G(k) (dH(R)/dx) G(k).
         """
@@ -462,7 +462,7 @@ class TBGreen:
         return GR, dGRdx
 
     def get_GR_and_dGRdx(self, Rpts, energy, dHdx):
-        """
+        r"""
         calculate G(R) and dG(R)/dx.
         dG(k)/dx =  G(k) (dH(k)/dx) G(k).
         dG(R)/dx = \sum_k dG(k)/dx * e^{-ikR}
@@ -483,7 +483,7 @@ class TBGreen:
         return GR, dGRdx
 
     def get_GR_and_dGRdx_and_dGRdx2(self, Rpts, energy, dHdx, dHdx2):
-        """
+        r"""
         calculate G(R) and dG(R)/dx.
         dG(k)/dx =  G(k) (dH(k)/dx) G(k).
         dG(R)/dx = \sum_k dG(k)/dx * e^{-ikR}
