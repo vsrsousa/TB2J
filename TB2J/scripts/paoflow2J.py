@@ -41,20 +41,20 @@ def run_paoflow2J():
     )
     parser.add_argument(
         "--prefix_spinor",
-        help="Prefix for non-collinear/SOC PAOflow files (e.g., 'paoflow_soc')",
-        default="paoflow_soc",
+        help="Prefix for non-collinear/SOC PAOflow _hr.dat file (default: 'hamiltonian')",
+        default="hamiltonian",
         type=str,
     )
     parser.add_argument(
         "--prefix_up",
-        help="Prefix for spin-up PAOflow files (e.g., 'paoflow_up')",
-        default="paoflow_up",
+        help="Prefix for spin-up PAOflow _hr.dat file (default: 'hamiltonian_0')",
+        default="hamiltonian_0",
         type=str,
     )
     parser.add_argument(
         "--prefix_down",
-        help="Prefix for spin-down PAOflow files (e.g., 'paoflow_dn')",
-        default="paoflow_dn",
+        help="Prefix for spin-down PAOflow _hr.dat file (default: 'hamiltonian_1')",
+        default="hamiltonian_1",
         type=str,
     )
     

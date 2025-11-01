@@ -8,70 +8,83 @@ What is PAOflow?
 
 PAOflow (Projections of Atomic Orbitals flow) is an alternative to Wannier90 for constructing 
 tight-binding Hamiltonians from DFT calculations. It uses projections of atomic orbitals (PAO) 
-to generate localized basis functions and outputs the Hamiltonian in HDF5 format.
+to generate localized basis functions.
 
 Key features of PAOflow:
 
-* Generates tight-binding Hamiltonians from DFT calculations
-* Uses HDF5 format for efficient data storage
+* Generates tight-binding Hamiltonians from DFT calculations (QE, VASP, etc.)
+* Uses projections of atomic orbitals instead of maximally localized Wannier functions
+* Outputs Hamiltonians in **Wannier90-compatible format** (_hr.dat files)
 * Supports both collinear and non-collinear spin calculations
-* Alternative workflow to Wannier90
+* Alternative workflow to Wannier90 with different localization approach
 
-Installation
-------------
+PAOflow Output Format
+---------------------
 
-To use PAOflow with TB2J, you need to install the optional PAOflow dependency:
+PAOflow outputs Hamiltonians in Wannier90-compatible ``_hr.dat`` format using the 
+``write_Hamiltonian()`` method. This means:
 
-.. code-block:: bash
+* **You can use the standard** ``wann2J.py`` **command with PAOflow output!**
+* The ``paoflow2J.py`` command is a convenience wrapper with PAOflow-specific defaults
 
-   pip install TB2J[paoflow]
+For collinear calculations, PAOflow generates:
 
-This will install ``h5py``, which is required to read PAOflow's HDF5 output files.
+* ``hamiltonian_0.dat`` - Hamiltonian for spin-up channel (Wannier90 _hr.dat format)
+* ``hamiltonian_1.dat`` - Hamiltonian for spin-down channel (Wannier90 _hr.dat format)
 
-PAOflow Output Files
---------------------
+For non-collinear/SOC calculations:
 
-PAOflow typically generates the following files that TB2J can read:
+* ``hamiltonian.dat`` - Hamiltonian with spin-orbit coupling (Wannier90 _hr.dat format)
 
-* ``paoflow_up.hdf5`` or ``paoflow_up.h5`` - Hamiltonian for spin-up channel (collinear)
-* ``paoflow_dn.hdf5`` or ``paoflow_dn.h5`` - Hamiltonian for spin-down channel (collinear)
-* ``paoflow_soc.hdf5`` or ``paoflow_soc.h5`` - Hamiltonian for non-collinear/SOC calculation
+The _hr.dat format contains:
 
-The HDF5 files should contain:
-
-* ``hamiltonian`` or ``H_R`` - Hamiltonian matrices H(R) for each R vector
-* ``R_vectors`` or ``Rlist`` - Real-space lattice vectors R
-* ``orbital_positions`` or ``wann_centers`` - Positions of orbital centers
-* ``cell`` or ``lattice`` - Lattice vectors of the unit cell
-* ``positions`` - Atomic positions
-* ``numbers`` or ``atomic_numbers`` - Atomic numbers
-* ``R_degeneracy`` or ``weights`` (optional) - Degeneracy weights for R vectors
+* Line 1: Header comment
+* Line 2: Number of Wannier functions
+* Line 3: Number of R-lattice vectors
+* Lines 4+: Degeneracy weights (all 1's in PAOflow output)
+* Data lines: ``Rx Ry Rz orb1 orb2 H_real H_imag`` for each matrix element
 
 Running TB2J with PAOflow
 --------------------------
 
-Collinear Calculation
-~~~~~~~~~~~~~~~~~~~~~
+Method 1: Using paoflow2J.py (Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For a collinear spin-polarized calculation, you need two PAOflow output files 
-(one for spin-up and one for spin-down):
+The ``paoflow2J.py`` command provides PAOflow-specific defaults:
 
 .. code-block:: bash
 
    paoflow2J.py --path /path/to/paoflow/output \
-                --prefix_up paoflow_up \
-                --prefix_down paoflow_dn \
                 --efermi 6.15 \
                 --kmesh 5 5 5 \
                 --elements Mn Fe \
                 --emin -10.0 \
                 --emax 0.0
 
+This automatically looks for ``hamiltonian_0.dat`` and ``hamiltonian_1.dat`` for 
+collinear calculations.
+
+Method 2: Using wann2J.py (Also Works)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since PAOflow outputs Wannier90-compatible files, you can use:
+
+.. code-block:: bash
+
+   wann2J.py --path /path/to/paoflow/output \
+             --prefix_up hamiltonian_0 \
+             --prefix_down hamiltonian_1 \
+             --efermi 6.15 \
+             --kmesh 5 5 5 \
+             --elements Mn Fe \
+             --emin -10.0 \
+             --emax 0.0
+
 Parameters:
 
-* ``--path`` - Directory containing PAOflow HDF5 files
-* ``--prefix_up`` - Prefix for spin-up HDF5 file (default: ``paoflow_up``)
-* ``--prefix_down`` - Prefix for spin-down HDF5 file (default: ``paoflow_dn``)
+* ``--path`` - Directory containing PAOflow output files
+* ``--prefix_up`` - Prefix for spin-up _hr.dat file (default for paoflow2J.py: ``hamiltonian_0``)
+* ``--prefix_down`` - Prefix for spin-down _hr.dat file (default for paoflow2J.py: ``hamiltonian_1``)
 * ``--efermi`` - Fermi energy in eV (required)
 * ``--kmesh`` - k-point mesh for integration (default: 5 5 5)
 * ``--elements`` - Magnetic elements (e.g., Mn Fe Ni)
@@ -87,49 +100,60 @@ For non-collinear or spin-orbit coupling calculations:
 
    paoflow2J.py --path /path/to/paoflow/output \
                 --spinor \
-                --prefix_spinor paoflow_soc \
                 --efermi 6.15 \
                 --kmesh 5 5 5 \
                 --elements Mn Fe \
                 --emin -10.0 \
                 --emax 0.0
 
-The ``--spinor`` flag indicates a non-collinear calculation.
+The ``--spinor`` flag indicates a non-collinear calculation. This automatically uses 
+``--prefix_spinor hamiltonian`` (the default).
 
 Structure File
 ~~~~~~~~~~~~~~
 
-By default, TB2J reads the atomic structure from the PAOflow HDF5 file. 
-However, you can optionally provide a separate structure file:
+You need to provide a structure file containing atomic positions. PAOflow's _hr.dat 
+files don't include atomic structure information:
 
 .. code-block:: bash
 
    paoflow2J.py --posfile POSCAR --path /path/to/paoflow/output ...
 
-The ``--posfile`` parameter accepts any format supported by ASE (POSCAR, CIF, XYZ, etc.).
+The ``--posfile`` parameter accepts any format supported by ASE (POSCAR, CIF, XYZ, etc.). 
+You can typically use the same structure file that was input to your DFT calculation.
 
 Complete Example
 ----------------
 
-Here's a complete example for calculating exchange parameters in SrMnO\ :sub:`3`:
+Here's a complete workflow for calculating exchange parameters in a magnetic material:
 
 Step 1: Run PAOflow
 ~~~~~~~~~~~~~~~~~~~
 
-First, generate the tight-binding Hamiltonian using PAOflow (refer to PAOflow documentation):
+First, generate the tight-binding Hamiltonian using PAOflow:
 
 .. code-block:: python
 
-   # Example PAOflow script (pseudocode)
-   from paoflow import PAOflow
+   from PAOFLOW import PAOFLOW
    
-   pao = PAOflow(calculation_type='scf',
-                 inputfile='scf.in',
-                 output_format='hdf5')
-   pao.projectability()
-   pao.pao_hamiltonian()
-   pao.write_hamiltonian('paoflow_up.hdf5')  # For spin-up
-   pao.write_hamiltonian('paoflow_dn.hdf5')  # For spin-down
+   # Initialize PAOflow with your DFT output
+   paoflow = PAOFLOW.PAOFLOW(savedir='yourcode.save', outputdir='./output')
+   
+   # Read atomic projections from DFT output
+   paoflow.read_atomic_proj_QE()  # Or read_atomic_proj_VASP() for VASP
+   
+   # Set projectability threshold
+   paoflow.projectability(pthr=0.95)
+   
+   # Build PAO Hamiltonian in real space
+   paoflow.pao_hamiltonian()
+   
+   # Write Hamiltonian in Wannier90 format
+   # For collinear: writes hamiltonian_0.dat and hamiltonian_1.dat
+   # For non-collinear: writes hamiltonian.dat
+   paoflow.write_Hamiltonian()
+   
+   paoflow.finish_execution()
 
 Step 2: Run TB2J
 ~~~~~~~~~~~~~~~~
@@ -138,9 +162,8 @@ Calculate the exchange parameters:
 
 .. code-block:: bash
 
-   paoflow2J.py --path ./ \
-                --prefix_up paoflow_up \
-                --prefix_down paoflow_dn \
+   paoflow2J.py --path ./output \
+                --posfile POSCAR \
                 --efermi 6.15 \
                 --kmesh 4 4 4 \
                 --elements Mn \
@@ -176,7 +199,7 @@ Tips and Troubleshooting
    and the noise level is much smaller than the exchange energies.
 
 2. **Orbital Localization**: Like Wannier90, the quality of results depends on having 
-   well-localized orbitals. Check the spreads in PAOflow output.
+   well-localized orbitals. Check the projectability in PAOflow output.
 
 3. **Energy Window**: Choose ``--emin`` and ``--emax`` to include all relevant orbitals 
    (typically d or f orbitals for magnetic atoms and p orbitals for ligands).
@@ -184,33 +207,34 @@ Tips and Troubleshooting
 4. **k-mesh Convergence**: Test convergence with respect to the k-point mesh using 
    ``--kmesh``. A denser mesh may be needed for complex materials.
 
-5. **File Format**: TB2J looks for files with extensions ``.hdf5`` or ``.h5``. Ensure 
-   your PAOflow outputs use one of these extensions.
+5. **File Names**: By default, paoflow2J.py looks for ``hamiltonian_0.dat`` and 
+   ``hamiltonian_1.dat`` (collinear) or ``hamiltonian.dat`` (non-collinear). If PAOflow 
+   writes different names, use ``--prefix_up``, ``--prefix_down``, or ``--prefix_spinor``.
 
-6. **Missing Dependencies**: If you get an import error for ``h5py``, install it:
-
-   .. code-block:: bash
-
-      pip install h5py
+6. **Structure File**: Always provide a structure file with ``--posfile`` since PAOflow's 
+   _hr.dat files don't contain atomic positions.
 
 Comparison with Wannier90
 --------------------------
 
 PAOflow vs Wannier90:
 
-+------------------------+------------------------+------------------------+
-| Feature                | Wannier90              | PAOflow                |
-+========================+========================+========================+
-| File format            | Text files (_hr.dat)   | HDF5 (.h5, .hdf5)      |
-+------------------------+------------------------+------------------------+
-| Orbital construction   | Maximally localized WFs| Projected atomic orbs  |
-+------------------------+------------------------+------------------------+
-| Interface in TB2J      | ``wann2J.py``          | ``paoflow2J.py``       |
-+------------------------+------------------------+------------------------+
-| Typical use case       | General tight-binding  | Alternative workflow   |
-+------------------------+------------------------+------------------------+
++------------------------+--------------------------------+---------------------------+
+| Feature                | Wannier90                      | PAOflow                   |
++========================+================================+===========================+
+| Output format          | Text files (_hr.dat)           | Same (_hr.dat)            |
++------------------------+--------------------------------+---------------------------+
+| Orbital construction   | Maximally localized WFs        | Projected atomic orbitals |
++------------------------+--------------------------------+---------------------------+
+| Interface in TB2J      | ``wann2J.py``                  | ``paoflow2J.py`` or       |
+|                        |                                | ``wann2J.py``             |
++------------------------+--------------------------------+---------------------------+
+| Structure info         | Included in .win file          | Separate file needed      |
++------------------------+--------------------------------+---------------------------+
 
-Both methods should give similar results if the Hamiltonians are well-converged.
+**Key Point**: PAOflow outputs are **Wannier90-compatible**, so both ``wann2J.py`` and 
+``paoflow2J.py`` work with PAOflow output. The main difference is the orbital construction 
+method (MLWFs vs. PAOs), which may affect localization quality.
 
 Advanced Options
 ----------------
@@ -253,9 +277,10 @@ For more advanced options, see:
 Further Reading
 ---------------
 
-* PAOflow documentation: https://github.com/marcobn/PAOflow
+* PAOflow GitHub: https://github.com/marcobn/PAOflow (original)
+* PAOflow fork: https://github.com/vsrsousa/PAOFLOW (with TB2J examples)
 * TB2J documentation: https://tb2j.readthedocs.io
-* Wannier90 comparison: :doc:`wannier`
+* Wannier90 tutorial: :doc:`wannier`
 * Exchange parameter reference: :doc:`parameters`
 
 References
@@ -263,6 +288,12 @@ References
 
 If you use PAOflow with TB2J, please cite:
 
-* TB2J paper: [TB2J citation]
-* PAOflow paper: Marco Buongiorno Nardelli, "PAOflow: A utility for constructing 
-  Hamiltonians from projections of atomic orbitals", Comp. Mat. Sci. (2020)
+* **TB2J**: He Xu et al., "TB2J: A Package for Computing Magnetic Interaction Parameters", 
+  Comp. Phys. Commun. (2020)
+
+* **PAOflow**: F.T. Cerasoli et al., "Advanced modeling of materials with PAOFLOW 2.0: 
+  New features and software design", Comp. Mat. Sci. 200, 110828 (2021)
+
+* **PAOflow original**: M. Buongiorno Nardelli et al., "PAOFLOW: A utility to construct 
+  and operate on ab initio Hamiltonians from the Projections of electronic wavefunctions 
+  on Atomic Orbital bases", Comp. Mat. Sci. 143, 462 (2018)
