@@ -351,14 +351,14 @@ class TBGreen:
                 evecs_k = self.get_evecs(ik)
                 # chekc if any of the evecs element is nan
                 rho += (
-                    (evecs_k * fermi(self.evals[ik], self.efermi, nspin=2))
+                    (evecs_k * fermi(self.evals[ik], self.efermi, nspin=1))
                     @ evecs_k.T.conj()
                     * self.kweights[ik]
                 )
         else:
             for ik, _ in enumerate(self.kpts):
                 rho += (
-                    (self.get_evecs(ik) * fermi(self.evals[ik], self.efermi, nspin=2))
+                    (self.get_evecs(ik) * fermi(self.evals[ik], self.efermi, nspin=1))
                     @ self.get_evecs(ik).T.conj()
                     @ self.get_Sk(ik)
                     * self.kweights[ik]
@@ -374,7 +374,7 @@ class TBGreen:
             rhok = np.einsum(
                 "ib,b, bj-> ij",
                 evec,
-                fermi(self.evals[ik], self.efermi, nspin=2),
+                fermi(self.evals[ik], self.efermi, nspin=1),
                 evec.conj().T,
             )
             for iR, R in enumerate(Rlist):
