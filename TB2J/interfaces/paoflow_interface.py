@@ -108,13 +108,24 @@ class PAOflowManager(Manager):
         
         PAOflow doesn't generate _centres.xyz files, so we create orbital
         positions based on the number of orbitals and atomic positions.
+        
+        Note: PAOflow names Hamiltonian files as prefix.dat_0 and prefix.dat_1
+        (with spin component after the .dat extension).
         """
         print("Reading PAOflow hamiltonian: spin up.")
-        hr_fname_up = os.path.join(path, prefix_up + ".dat")
+        # PAOflow uses unusual naming: hamiltonian.dat_0, hamiltonian.dat_1
+        # So don't append .dat if prefix already looks like a complete filename
+        if not (prefix_up.endswith('.dat_0') or prefix_up.endswith('.dat_1') or prefix_up.endswith('.dat')):
+            hr_fname_up = os.path.join(path, prefix_up + ".dat")
+        else:
+            hr_fname_up = os.path.join(path, prefix_up)
         nbasis_up, data_up, R_degens_up = parse_ham(fname=hr_fname_up)
         
         print("Reading PAOflow hamiltonian: spin down.")
-        hr_fname_dn = os.path.join(path, prefix_dn + ".dat")
+        if not (prefix_dn.endswith('.dat_0') or prefix_dn.endswith('.dat_1') or prefix_dn.endswith('.dat')):
+            hr_fname_dn = os.path.join(path, prefix_dn + ".dat")
+        else:
+            hr_fname_dn = os.path.join(path, prefix_dn)
         nbasis_dn, data_dn, R_degens_dn = parse_ham(fname=hr_fname_dn)
         
         # Create orbital positions based on atomic positions
@@ -154,9 +165,15 @@ class PAOflowManager(Manager):
     def prepare_model_ncl(self, path, prefix_SOC, atoms, output_path):
         """
         Prepare tight-binding model for non-collinear spin calculation.
+        
+        Note: PAOflow may name files as prefix.dat or with other extensions.
         """
         print("Reading PAOflow hamiltonian: non-collinear spin.")
-        hr_fname = os.path.join(path, prefix_SOC + ".dat")
+        # PAOflow uses unusual naming convention - don't append .dat if already present
+        if not prefix_SOC.endswith('.dat'):
+            hr_fname = os.path.join(path, prefix_SOC + ".dat")
+        else:
+            hr_fname = os.path.join(path, prefix_SOC)
         nbasis, data, R_degens = parse_ham(fname=hr_fname)
         
         # Create orbital positions based on atomic positions

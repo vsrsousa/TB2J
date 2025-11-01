@@ -22,39 +22,56 @@ def run_paoflow2J():
     """
     print_license()
     parser = argparse.ArgumentParser(
-        description="paoflow2J: Calculate exchange parameters J from PAOflow Hamiltonians using magnetic force theorem"
+        description="paoflow2J: Calculate exchange parameters J from PAOflow Hamiltonians using magnetic force theorem. "
+                    "PAOflow uses an unusual file naming convention where spin components are appended AFTER the .dat extension "
+                    "(e.g., hamiltonian.dat_0 for spin-up, hamiltonian.dat_1 for spin-down).",
+        epilog="Examples:\n"
+               "  # Basic usage with PAOflow output in current directory:\n"
+               "  paoflow2J.py --efermi 18.35 --elements Fe --posfile POSCAR\n\n"
+               "  # With custom Hamiltonian file locations:\n"
+               "  paoflow2J.py --efermi 18.35 --elements Fe --posfile POSCAR \\\n"
+               "    --prefix_up output/hamiltonian.dat_0 --prefix_down output/hamiltonian.dat_1\n\n"
+               "  # Non-collinear calculation:\n"
+               "  paoflow2J.py --efermi 18.35 --elements Fe --posfile POSCAR --spinor \\\n"
+               "    --prefix_spinor hamiltonian.dat\n",
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
     # PAOflow-specific arguments
     parser.add_argument(
         "--path",
-        help="Path to directory containing PAOflow HDF5 files",
+        help="Path to directory containing PAOflow Hamiltonian files (.dat files)",
         default="./",
         type=str,
     )
     parser.add_argument(
         "--posfile",
-        help="Name of the structure file (POSCAR, etc.). If not provided, "
-             "structure will be read from PAOflow HDF5 file",
+        help="Name of the structure file (POSCAR, CIF, etc.). REQUIRED for PAOflow since "
+             "Hamiltonian files don't contain atomic positions",
         default=None,
         type=str,
     )
     parser.add_argument(
         "--prefix_spinor",
-        help="Prefix for non-collinear/SOC PAOflow _hr.dat file (default: 'hamiltonian')",
-        default="hamiltonian",
+        help="Hamiltonian file for non-collinear/SOC calculation. PAOflow names files as 'hamiltonian.dat'. "
+             "Provide the complete filename or just the prefix (e.g., 'hamiltonian' or 'hamiltonian.dat')",
+        default="hamiltonian.dat",
         type=str,
     )
     parser.add_argument(
         "--prefix_up",
-        help="Prefix for spin-up PAOflow _hr.dat file (default: 'hamiltonian_0')",
-        default="hamiltonian_0",
+        help="Hamiltonian file for spin-up channel. PAOflow appends spin index AFTER .dat extension, "
+             "e.g., 'hamiltonian.dat_0'. Provide complete filename like 'output/hamiltonian.dat_0' or "
+             "'hamiltonian.dat_0' (default: 'hamiltonian.dat_0')",
+        default="hamiltonian.dat_0",
         type=str,
     )
     parser.add_argument(
         "--prefix_down",
-        help="Prefix for spin-down PAOflow _hr.dat file (default: 'hamiltonian_1')",
-        default="hamiltonian_1",
+        help="Hamiltonian file for spin-down channel. PAOflow appends spin index AFTER .dat extension, "
+             "e.g., 'hamiltonian.dat_1'. Provide complete filename like 'output/hamiltonian.dat_1' or "
+             "'hamiltonian.dat_1' (default: 'hamiltonian.dat_1')",
+        default="hamiltonian.dat_1",
         type=str,
     )
     
