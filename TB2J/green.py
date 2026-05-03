@@ -13,8 +13,6 @@ from pathos.multiprocessing import ProcessPool
 
 from TB2J.kpoints import ir_kpts, monkhorst_pack
 
-# from TB2J.mathutils.fermi import fermi
-
 MAX_EXP_ARGUMENT = np.log(sys.float_info.max)
 
 
@@ -339,11 +337,9 @@ class TBGreen:
         rho = np.zeros((self.nbasis, self.nbasis), dtype=complex)
         if self.is_orthogonal:
             for ik, _ in enumerate(self.kpts):
-                evecs_k = self.get_evecs(ik)
-                # chekc if any of the evecs element is nan
                 rho += (
-                    (evecs_k * fermi(self.evals[ik], self.efermi, nspin=2))
-                    @ evecs_k.T.conj()
+                    (self.get_evecs(ik) * fermi(self.evals[ik], self.efermi, nspin=2))
+                    @ self.get_evecs(ik).T.conj()
                     * self.kweights[ik]
                 )
         else:
@@ -354,7 +350,6 @@ class TBGreen:
                     @ self.get_Sk(ik)
                     * self.kweights[ik]
                 )
-        # check if rho has nan values
         return rho
 
     def get_rho_R(self, Rlist):
