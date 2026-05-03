@@ -27,7 +27,6 @@ class ExchangeCL2(ExchangeCL):
             tbmodel=self.tbmodel_up,
             kmesh=self.kmesh,
             efermi=self.efermi,
-            gamma=True,
             use_cache=self._use_cache,
             nproc=self.nproc,
         )
@@ -35,7 +34,6 @@ class ExchangeCL2(ExchangeCL):
             tbmodel=self.tbmodel_dn,
             kmesh=self.kmesh,
             efermi=self.efermi,
-            gamma=True,
             use_cache=self._use_cache,
             nproc=self.nproc,
         )
