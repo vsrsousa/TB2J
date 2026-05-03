@@ -140,7 +140,7 @@ def write_exchange_section(
         J = cls.exchange_Jdict[ll]
         vec, distance = cls.distance_dict[ll]
         myfile.write(
-            "   {:5s} {:5s} ({:3d}, {:3d}, {:3d}) {:7.4f}   ({:6.3f}, {:6.3f}, {:6.3f}) {:6.3f} \n".format(
+            "   {:5s} {:5s} ({:3d}, {:3d}, {:3d}) {:7.4f}   ({:6.3f}, {:6.3f}, {:6.3f}) {:7.4f} \n".format(
                 sns[cls.ind_atoms[i]],
                 sns[cls.ind_atoms[j]],
                 R[0],
