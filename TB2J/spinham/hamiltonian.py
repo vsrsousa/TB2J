@@ -114,7 +114,7 @@ def plot_magnon_json(filename, ax, color="k", show=True):
     ax.set_ylabel("Energy (meV)")
     ax.set_xlim(xlist[0][0], xlist[-1][-1])
     ax.set_xticks(Xs)
-    knames = [x if x != "G" else "$\Gamma$" for x in knames]
+    knames = [x if x != "G" else "$$\\\\Gamma$$" for x in knames]
     ax.set_xticklabels(knames)
     for x in Xs:
         ax.axvline(x, linewidth=0.6, color="gray")
@@ -342,7 +342,7 @@ class SpinHamiltonian(object):
     # @profile
     def get_effective_field(self, S):
         """
-        calculate the effective field Heff=-1/ms * \partial H / \partial S
+        calculate the effective field Heff=-1/ms * \\partial H / \\partial S
         Langevin term not included.
         """
         Heff = 0.0
@@ -451,7 +451,7 @@ class SpinHamiltonian(object):
         default_kvectors = np.array(
             [[0, 0, 0], [0.5, 0, 0], [0.5, 0.5, 0], [0, 0, 0], [0.5, 0.5, 0.5]]
         )
-        default_knames = ["$\Gamma$", "X", "M", "$\Gamma$", "R"]
+        default_knames = ["$$\\\\Gamma$$", "X", "M", "$$\\\\Gamma$$", "R"]
         
         if kvectors is None and knames is None:
             # fully automatic k-path via bandpath()
@@ -526,7 +526,8 @@ class SpinHamiltonian(object):
         for name, k in spk.items():
             if name == "G":
                 name = "Gamma"
-            print(f"{name}: {k}")
+            k_list = [float(x) for x in k]
+            print(f"{name}: {k_list}")
 
         allevals = []
         for kpts, xs in zip(kptlist, xlist):
@@ -541,7 +542,7 @@ class SpinHamiltonian(object):
         ax.set_ylabel("Energy (meV)")
         ax.set_xlim(xlist[0][0], xlist[-1][-1])
         ax.set_xticks(Xs)
-        knames = [x if x != "G" else "$\Gamma$" for x in knames]
+        knames = [x if x != "G" else "$$\\\\Gamma$$" for x in knames]
         ax.set_xticklabels(knames)
         for x in Xs:
             ax.axvline(x, linewidth=0.6, color="gray")
