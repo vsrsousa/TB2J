@@ -439,7 +439,8 @@ class ExchangeCL2(ExchangeCL):
         self.get_rho_atom()
 
         # Compute charge and magnetic moments from Green's function diagonals
-        self.compute_charge_and_magnetic_moments()
+        # NOTE: This method produces incorrect results, disabled in favor of get_rho_atom()
+        # self.compute_charge_and_magnetic_moments()
 
         self.A_to_Jtensor()
 
