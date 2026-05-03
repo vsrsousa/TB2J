@@ -7,11 +7,10 @@ from collections import defaultdict
 from shutil import rmtree
 
 import numpy as np
-from HamiltonIO.model.occupations import GaussOccupations
-from HamiltonIO.model.occupations import myfermi as fermi
 from pathos.multiprocessing import ProcessPool
 
 from TB2J.kpoints import ir_kpts, monkhorst_pack
+from TB2J.mathutils.fermi import fermi
 
 MAX_EXP_ARGUMENT = np.log(sys.float_info.max)
 
@@ -338,14 +337,14 @@ class TBGreen:
         if self.is_orthogonal:
             for ik, _ in enumerate(self.kpts):
                 rho += (
-                    (self.get_evecs(ik) * fermi(self.evals[ik], self.efermi, nspin=2))
+                    (self.get_evecs(ik) * fermi(self.evals[ik], self.efermi))
                     @ self.get_evecs(ik).T.conj()
                     * self.kweights[ik]
                 )
         else:
             for ik, _ in enumerate(self.kpts):
                 rho += (
-                    (self.get_evecs(ik) * fermi(self.evals[ik], self.efermi, nspin=2))
+                    (self.get_evecs(ik) * fermi(self.evals[ik], self.efermi))
                     @ self.get_evecs(ik).T.conj()
                     @ self.get_Sk(ik)
                     * self.kweights[ik]
@@ -360,7 +359,7 @@ class TBGreen:
             rhok = np.einsum(
                 "ib,b, bj-> ij",
                 evec,
-                fermi(self.evals[ik], self.efermi, nspin=2),
+                fermi(self.evals[ik], self.efermi),
                 evec.conj().T,
             )
             for iR, R in enumerate(Rlist):
