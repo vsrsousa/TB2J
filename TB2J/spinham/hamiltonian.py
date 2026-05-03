@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from ase.dft.kpoints import bandpath
+from ase.data import atomic_masses
 from TB2J.kpoints import monkhorst_pack
 from .hamiltonian_terms import (
     ZeemanTerm,
@@ -26,6 +27,29 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
+
+def _mass_to_atomic_number(mass, tolerance=0.5):
+    """Convert atomic mass to atomic number."""
+    for z in range(1, len(atomic_masses)):
+        try:
+            if abs(atomic_masses[z] - mass) < tolerance:
+                return z
+        except (IndexError, TypeError):
+            continue
+    # Fallback: find closest match
+    min_diff = float('inf')
+    closest_z = 1
+    for z in range(1, len(atomic_masses)):
+        try:
+            diff = abs(atomic_masses[z] - mass)
+            if diff < min_diff:
+                min_diff = diff
+                closest_z = z
+        except (IndexError, TypeError):
+            continue
+    return closest_z
+
 
 
 plot_script = """\
@@ -410,10 +434,8 @@ class SpinHamiltonian(object):
 
     def plot_magnon_band(
         self,
-        kvectors=np.array(
-            [[0, 0, 0], [0.5, 0, 0], [0.5, 0.5, 0], [0, 0, 0], [0.5, 0.5, 0.5]]
-        ),
-        knames=["$\Gamma$", "X", "M", "$\Gamma$", "R"],
+        kvectors=None,
+        knames=None,
         supercell_matrix=None,
         npoints=50,
         color="red",
@@ -424,23 +446,78 @@ class SpinHamiltonian(object):
     ):
         if ax is None:
             fig, ax = plt.subplots()
-        kptlist = kvectors
-        if knames is None and kvectors is None:
-            # fully automatic k-path
-            bp = Cell(self.cell).bandpath(npoints=npoints)
+        
+        # Default k-path if not specified
+        default_kvectors = np.array(
+            [[0, 0, 0], [0.5, 0, 0], [0.5, 0.5, 0], [0, 0, 0], [0.5, 0.5, 0.5]]
+        )
+        default_knames = ["$\Gamma$", "X", "M", "$\Gamma$", "R"]
+        
+        if kvectors is None and knames is None:
+            # fully automatic k-path via bandpath()
+            from TB2J.seekpath_patch import set_structure_context
+            
+            if hasattr(self, 'crystal_positions') and hasattr(self, 'crystal_zions'):
+                with set_structure_context(self.cell, self.crystal_positions, self.crystal_zions):
+                    bp = Cell(self.cell).bandpath(npoints=npoints)
+            else:
+                bp = Cell(self.cell).bandpath(npoints=npoints)
+            
             spk = bp.special_points
             xlist, kptlist, Xs, knames = group_band_path(bp)
         elif knames is not None and kvectors is None:
             # user specified kpath by name
-            bp = Cell(self.cell).bandpath(knames, npoints=npoints)
+            from TB2J.seekpath_patch import set_structure_context
+            
+            if hasattr(self, 'crystal_positions') and hasattr(self, 'crystal_zions'):
+                with set_structure_context(self.cell, self.crystal_positions, self.crystal_zions):
+                    bp = Cell(self.cell).bandpath(knames, npoints=npoints)
+            else:
+                bp = Cell(self.cell).bandpath(knames, npoints=npoints)
+            
             spk = bp.special_points
             kpts = bp.kpts
             xlist, kptlist, Xs, knames = group_band_path(bp)
         else:
-            # user spcified kpath and kvector.
-            kpts, x, Xs = bandpath(kvectors, self.cell, npoints)
+            # user specified kpath and kvector
+            if kvectors is None:
+                kvectors = default_kvectors
+            if knames is None:
+                knames = default_knames
+            
+            # For explicit kvectors, don't use bandpath; directly interpolate
+            kvectors = np.array(kvectors)
+            # Generate k-points along each segment
+            kpts = []
+            xs = []
+            cumulative_x = 0.0
+            Xs = [0.0]  # x-coordinate of first special point
+            
+            for i, kv in enumerate(kvectors):
+                if i == 0:
+                    kpts.append(kv)
+                    xs.append(cumulative_x)
+                else:
+                    # Interpolate between previous and current k-point
+                    prev_kv = kvectors[i-1]
+                    dist = np.linalg.norm(kv - prev_kv)
+                    
+                    # Generate intermediate points
+                    for t in np.linspace(0, 1, npoints+1)[1:]:
+                        k_interp = prev_kv + t * (kv - prev_kv)
+                        kpts.append(k_interp)
+                        x_val = cumulative_x + t * dist
+                        xs.append(x_val)
+                    
+                    cumulative_x += dist
+                    Xs.append(cumulative_x)
+            
+            kpts = np.array(kpts)
+            xs = np.array(xs)
+            Xs = np.array(Xs)
+            
             spk = dict(zip(knames, kvectors))
-            xlist = [x]
+            xlist = [xs]
             kptlist = [kpts]
 
         if supercell_matrix is not None:
@@ -469,15 +546,26 @@ class SpinHamiltonian(object):
         for x in Xs:
             ax.axvline(x, linewidth=0.6, color="gray")
 
+        # Concatenate xlist and kptlist if they came from group_band_path (multiple segments)
+        # to maintain compatibility with JSON format that expects single concatenated arrays
+        if len(xlist) > 1 and isinstance(xlist[0], (list, np.ndarray)):
+            xlist_concat = np.concatenate(xlist)
+            kptlist_concat = np.concatenate(kptlist)
+            allevals_concat = np.concatenate(allevals)
+        else:
+            xlist_concat = xlist[0] if len(xlist) == 1 else np.concatenate(xlist)
+            kptlist_concat = kptlist[0] if len(kptlist) == 1 else np.concatenate(kptlist)
+            allevals_concat = allevals[0] if len(allevals) == 1 else np.concatenate(allevals)
+
         self.magnon_info = {
-            "kptlist": kptlist,
-            "xlist": xlist,
+            "kptlist": [kptlist_concat],
+            "xlist": [xlist_concat],
             "knames": knames,
             "X_for_highsym_kpoints": Xs,
             "knames": knames,
             "nbands": nbands,
-            "nkpts": len(kptlist),
-            "evals": allevals,
+            "nkpts": 1,  # Always 1 after concatenation
+            "evals": [allevals_concat],
         }
         if output_fname is not None:
             self.save_magnon_json(output_fname)
@@ -509,6 +597,20 @@ def read_spin_ham_from_file(fname):
         spinat=parser.spin_spinat,
         zion=parser.spin_zions,
     )
+    
+    # Store full crystal structure for seekpath integration
+    try:
+        # Convert cartesian positions to fractional coordinates for SeekPath
+        cart_positions = np.array(parser.positions, dtype=float)
+        # Solve: cart = cell.T @ frac => frac = (cell.T)^-1 @ cart
+        frac_positions = np.linalg.solve(ham.cell.T, cart_positions.T).T
+        ham.crystal_positions = frac_positions
+        ham.crystal_zions = [_mass_to_atomic_number(mass) for mass in parser.masses]
+    except Exception:
+        # Fallback
+        ham.crystal_positions = np.array(parser.spin_positions, dtype=float)
+        ham.crystal_zions = np.array(parser.spin_zions, dtype=int).tolist()
+    
     ham.set(
         gilbert_damping=parser.spin_damping_factors, gyro_ratio=parser.spin_gyro_ratios
     )

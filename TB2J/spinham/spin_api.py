@@ -64,10 +64,8 @@ class SpinModel:
 
     def plot_magnon_band(
         self,
-        kvectors=np.array(
-            [[0, 0, 0], [0.5, 0, 0], [0.5, 0.5, 0], [0, 0, 0], [0.5, 0.5, 0.5]]
-        ),
-        knames=["$\Gamma$", "X", "M", "$\Gamma$", "R"],
+        kvectors=None,
+        knames=None,
         supercell_matrix=None,
         npoints=100,
         color="red",

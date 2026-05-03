@@ -10,7 +10,7 @@ from ase.dft.kpoints import get_special_points, parse_path_string
 # from minimulti.spin.mover import SpinMover
 
 
-def group_band_path(bp, eps=1e-8, shift=0.15):
+def group_band_path(bp, eps=1e-8, shift=0.30):
     xs, Xs, knames = bp.get_linear_kpoint_axis()
     kpts = bp.kpts
 
