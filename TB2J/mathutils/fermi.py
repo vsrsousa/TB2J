@@ -2,15 +2,12 @@ import sys
 
 import numpy as np
 
-MAX_EXP_ARGUMENT = np.log(sys.float_info.max / 100000)
-# print(MAX_EXP_ARGUMENT)
-
 
 def fermi(e, mu, width=0.01):
-    """
+    r"""
     the fermi function.
      .. math::
-        f=\\\\frac{1}{\\\\exp((e-\\\\mu)/width)+1}
+        f=\\frac{1}{\exp((e-\mu)/width)+1}
 
     :param e,mu,width: e,\mu,width
     """
