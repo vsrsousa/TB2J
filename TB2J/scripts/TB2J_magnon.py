@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import ast
 
 from TB2J.plot import plot_magnon_band, write_eigen
 from TB2J.versioninfo import print_license
@@ -25,7 +26,7 @@ def plot_magnon():
         "--qpath",
         default=None,
         type=str,
-        help="The names of special q-points. If not given, the path will be automatically choosen. See https://wiki.fysik.dtu.dk/ase/ase/dft/kpoints.html for the table of special kpoints and the default path.",
+        help='The k-point path as space-separated or comma-separated names, e.g., "Gamma X P N" or "Gamma, X, P, N". If not given, the path will be automatically chosen using SeekPath.',
     )
 
     parser.add_argument(
@@ -93,6 +94,31 @@ def plot_magnon():
         else:
             return not x
 
+    # Parse custom k-point path if provided
+    custom_kpoint_names = None
+    if args.qpath is not None:
+        try:
+            # Try ast.literal_eval first (for properly quoted lists)
+            try:
+                custom_kpoint_names = ast.literal_eval(args.qpath)
+            except (ValueError, SyntaxError):
+                # Fallback: try comma-separated
+                if ',' in args.qpath:
+                    custom_kpoint_names = [n.strip().strip('"\'') for n in args.qpath.split(',')]
+                else:
+                    # Fallback: try space-separated
+                    custom_kpoint_names = [n.strip().strip('"\'') for n in args.qpath.split()]
+            
+            if not isinstance(custom_kpoint_names, list):
+                raise ValueError("--qpath must be a list")
+            if not custom_kpoint_names:
+                raise ValueError("--qpath list cannot be empty")
+        except (ValueError, SyntaxError) as e:
+            print(f"Error parsing --qpath: {e}")
+            print('Expected format: --qpath "Gamma X P N" or --qpath "Gamma, X, P, N" or --qpath "[Gamma, X, P, N]"')
+            import sys
+            sys.exit(1)
+
     if args.write_emin:
         write_eigen(
             has_exchange=nonone(args.no_Jiso),
@@ -102,7 +128,7 @@ def plot_magnon():
     else:
         plot_magnon_band(
             fname=args.fname,
-            knames=args.qpath,
+            custom_kpoint_names=custom_kpoint_names,
             npoints=300,
             Jq=args.Jq,
             figfname=args.figfname,

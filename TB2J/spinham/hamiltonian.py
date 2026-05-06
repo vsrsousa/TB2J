@@ -443,6 +443,7 @@ class SpinHamiltonian(object):
         Jq=False,
         ax=None,
         output_fname="magnon_band.json",
+        custom_kpoint_names=None,
     ):
         if ax is None:
             fig, ax = plt.subplots()
@@ -453,7 +454,34 @@ class SpinHamiltonian(object):
         )
         default_knames = ["$$\\\\Gamma$$", "X", "M", "$$\\\\Gamma$$", "R"]
         
-        if kvectors is None and knames is None:
+        if custom_kpoint_names is not None:
+            # User specified custom kpath via list of point names
+            from TB2J.seekpath_patch import set_structure_context, build_custom_bandpath_from_seekpath
+            
+            try:
+                if hasattr(self, 'crystal_positions') and hasattr(self, 'crystal_zions'):
+                    with set_structure_context(self.cell, self.crystal_positions, self.crystal_zions):
+                        bp = build_custom_bandpath_from_seekpath(
+                            self.cell, custom_kpoint_names, npoints=npoints
+                        )
+                else:
+                    bp = build_custom_bandpath_from_seekpath(
+                        self.cell, custom_kpoint_names, npoints=npoints
+                    )
+                
+                spk = bp.special_points
+                xlist, kptlist, Xs, knames = group_band_path(bp)
+            except Exception as e:
+                print(f"Error with custom k-path: {e}")
+                print("Falling back to automatic k-path")
+                if hasattr(self, 'crystal_positions') and hasattr(self, 'crystal_zions'):
+                    with set_structure_context(self.cell, self.crystal_positions, self.crystal_zions):
+                        bp = Cell(self.cell).bandpath(npoints=npoints)
+                else:
+                    bp = Cell(self.cell).bandpath(npoints=npoints)
+                spk = bp.special_points
+                xlist, kptlist, Xs, knames = group_band_path(bp)
+        elif kvectors is None and knames is None:
             # fully automatic k-path via bandpath()
             from TB2J.seekpath_patch import set_structure_context
             

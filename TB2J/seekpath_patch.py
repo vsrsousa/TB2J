@@ -323,6 +323,163 @@ def _seekpath_bandpath_from_cell(cell, npoints=100, path=None):
     return SeekPathBandPath()
 
 
+
+def build_custom_bandpath_from_seekpath(cell, point_names, npoints=100):
+    """Build a custom band path from user-specified k-point names using SeekPath.
+    
+    Parameters
+    ----------
+    cell : array-like
+        3x3 unit cell vectors
+    point_names : list of str
+        List of k-point labels, e.g., ['Gamma', 'X', 'P', 'N']
+    npoints : int
+        Total number of k-points to generate along the path
+    
+    Returns
+    -------
+    object with get_linear_kpoint_axis() and special_points attribute
+        Compatible with ASE BandPath interface
+    
+    Raises
+    ------
+    ValueError
+        If any point name is not found in SeekPath results or other validation fails
+    """
+    if seekpath is None:
+        raise RuntimeError("SeekPath not available")
+    
+    cell = np.array(cell, dtype=float)
+    
+    # Get SeekPath data
+    try:
+        if (_structure_context['positions'] is not None and 
+            _structure_context['atomic_numbers'] is not None):
+            structure = (
+                cell.tolist(),
+                _structure_context['positions'].tolist(),
+                _structure_context['atomic_numbers'],
+            )
+        else:
+            structure = (cell.tolist(), [[0.0, 0.0, 0.0]], [1])
+        
+        data = seekpath.get_path(structure)
+        point_coords = data.get("point_coords", {})
+    except Exception as e:
+        raise RuntimeError(f"SeekPath failed: {e}")
+    
+    # Validate all requested points exist (case-insensitive matching)
+    # Create lowercase mapping to actual point names in seekpath
+    point_coords_lower = {k.upper(): k for k in point_coords.keys()}
+    
+    # Map user input to actual point names
+    mapped_point_names = []
+    for name in point_names:
+        name_upper = name.upper()
+        if name_upper not in point_coords_lower:
+            available = ", ".join(sorted(point_coords.keys()))
+            raise ValueError(f"Point '{name}' not found. Available points: {available}")
+        mapped_point_names.append(point_coords_lower[name_upper])
+    
+    point_names = mapped_point_names
+    
+    # Build segments from consecutive point pairs
+    segments = []
+    for i in range(len(point_names) - 1):
+        segments.append((point_names[i], point_names[i+1]))
+    
+    if not segments:
+        raise ValueError("Need at least 2 points to define a path")
+    
+    # Calculate segment lengths for proportional distribution of npoints
+    segment_lengths = []
+    for start_label, end_label in segments:
+        start_k = np.array(point_coords[start_label], dtype=float)
+        end_k = np.array(point_coords[end_label], dtype=float)
+        d = _dist(end_k, start_k, cell=cell)
+        segment_lengths.append(d)
+    
+    total_length = sum(segment_lengths)
+    if total_length == 0:
+        raise ValueError("All segments have zero length")
+    
+    # Distribute npoints proportionally
+    segment_npoints = []
+    points_assigned = 0
+    for i, length in enumerate(segment_lengths):
+        if i == len(segment_lengths) - 1:
+            seg_npts = npoints - points_assigned
+        else:
+            seg_npts = max(2, int(round(npoints * length / total_length)))
+        segment_npoints.append(seg_npts)
+        points_assigned += seg_npts
+    
+    # Build k-points
+    all_kpts = []
+    all_x = []
+    cumulative_x = 0.0
+    special_point_x_list = []
+    
+    for seg_idx, (start_label, end_label) in enumerate(segments):
+        start_k = np.array(point_coords[start_label], dtype=float)
+        end_k = np.array(point_coords[end_label], dtype=float)
+        seg_npts = segment_npoints[seg_idx]
+        
+        # First point of segment
+        if seg_idx == 0:
+            all_kpts.append(start_k)
+            all_x.append(cumulative_x)
+            special_point_x_list.append((start_label, cumulative_x))
+        
+        # Interpolate between start and end
+        for i in range(1, seg_npts + 1):
+            frac = i / seg_npts
+            kpt = (1.0 - frac) * start_k + frac * end_k
+            all_kpts.append(kpt)
+            
+            # x-coordinate (distance along path)
+            dist = _dist(kpt, start_k, cell=cell)
+            x = cumulative_x + dist
+            all_x.append(x)
+            
+            # Record special point at end of segment
+            if i == seg_npts:
+                special_point_x_list.append((end_label, x))
+                cumulative_x = x
+    
+    all_kpts = np.array(all_kpts)
+    all_x = np.array(all_x)
+    
+    # Normalize k-point names
+    knames = _normalize_kpoint_names([label for label, _ in special_point_x_list])
+    Xs_array = np.array([x for _, x in special_point_x_list])
+    
+    # Create BandPath-compatible object with ORIGINAL point coordinates for special_points
+    class CustomBandPath:
+        def __init__(self, kpts, x, special_points_x, kpoint_names, original_point_coords, special_point_labels):
+            self.kpts = kpts
+            self.x = x
+            self.special_points_x = special_points_x
+            self.kpoint_names = kpoint_names
+            # Use original coordinates from SeekPath, not interpolated
+            self.special_points = {name: np.array(original_point_coords[label], dtype=float) 
+                                  for name, label in zip(kpoint_names, special_point_labels)}
+        
+        def __iter__(self):
+            return iter([self.kpts, self.x, self.special_points_x])
+        
+        def __getitem__(self, index):
+            return [self.kpts, self.x, self.special_points_x][index]
+        
+        def get_linear_kpoint_axis(self):
+            return self.x, self.special_points_x, self.kpoint_names
+    
+    # Get original labels (before normalization) for mapping
+    original_labels = [label for label, _ in special_point_x_list]
+    
+    return CustomBandPath(all_kpts, all_x, Xs_array, knames, point_coords, original_labels)
+
+
 def _apply_patch():
     """Apply monkey-patches to ASE to use SeekPath."""
     if ase_kpoints is None or seekpath is None:
