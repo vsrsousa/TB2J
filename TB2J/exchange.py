@@ -28,6 +28,7 @@ class Exchange(ExchangeParams):
         self._prepare_Rlist()
         self.set_tbmodels(tbmodels)
         self._adjust_emin()
+        self._expand_Rlist_to_hamiltonian_coverage()
         # self._prepare_elist(method="CFR")
         self._prepare_elist(method="legendre")
         self._prepare_basis()
@@ -89,9 +90,40 @@ class Exchange(ExchangeParams):
     def _prepare_Rlist(self):
         """
         prepare R list for J(i, j, R)
-        [-Rx, Rx] * [-Ry, Ry] * [-Rz, Rz]
+        R-space coverage is determined by Hamiltonian data, not by kmesh.
+        kmesh only affects Green's function integration density.
+        Initial Rlist will be expanded later in _expand_Rlist_to_hamiltonian_coverage().
         """
-        self.Rlist = kmesh_to_R(self.kmesh)
+        # Initialize as empty; will be filled from Hamiltonian data
+        self.Rlist = []
+
+    def _expand_Rlist_to_hamiltonian_coverage(self):
+        """
+        Define self.Rlist from ALL R vectors in the Hamiltonian data.
+        R-space coverage is determined ONLY by Hamiltonian, independent of kmesh.
+        kmesh is used only for Green's function integration density.
+        """
+        # Determine which tbmodel to check
+        if hasattr(self, 'G'):
+            # Non-collinear case
+            tbmodel = self.G.tbmodel
+        elif hasattr(self, 'Gup'):
+            # Collinear case with spin-up/down
+            tbmodel = self.Gup.tbmodel
+        else:
+            # Fallback: can't determine R-space
+            return
+
+        # Get actual R vectors from Hamiltonian data
+        if hasattr(tbmodel, 'data') and tbmodel.data is not None:
+            ham_R_vectors = sorted(list(set(tuple(R) for R in tbmodel.data.keys())))
+            self.Rlist = ham_R_vectors
+            
+            print(f"ℹ️  R-space coverage:")
+            print(f"   kmesh {self.kmesh}: used for G(k,ε) integration")
+            print(f"   R-space from Hamiltonian: {len(ham_R_vectors)} R vectors")
+            R_max = max(max(abs(r) for r in R_vec) for R_vec in self.Rlist) if self.Rlist else 0
+            print(f"   R_max = {R_max}")
 
     def _prepare_basis(self):
         if self.basis is None:
