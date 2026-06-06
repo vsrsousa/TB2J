@@ -7,7 +7,7 @@ print(MAX_EXP_ARGUMENT)
 
 
 def fermi(e, mu, width=0.01):
-    """
+    r"""
     the fermi function.
      .. math::
         f=\\frac{1}{\exp((e-\mu)/width)+1}

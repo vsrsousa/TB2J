@@ -3,7 +3,7 @@ from .utils import match_k
 
 
 class WannierUmat:
-    """
+    r"""
     Read Wannier90 Umnk matrix
     For one spin channel only.
     Indices
@@ -108,7 +108,7 @@ def EPCMat():
         return g_ewannk
 
     def to_ewannR_pqv(self, Umat):
-        """
+        r"""
         g_wann(k, q, v) =
         U^\dagger(k, Wm, Bk) g(k, q, v, Bo, Bp ) U(k+q, W  )
         """

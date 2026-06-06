@@ -1,4 +1,4 @@
-"""
+r"""
 This module calculate Oiju from electron-phonon coupling matrix and Electron Wannier function.
 """
 
@@ -65,12 +65,12 @@ class OijuWannEPC(ExchangeCL2):
             self._kmap[tuple(q)] = i
 
     def calc_dDelta(self):
-        """
+        r"""
         calculate $\delta \Delta$.
         <m 0| dV/d \tau(qV) | n 0>. Since only 0->0, q=0)
 
         \delta\Delta (q, v) = \sum_k w(k) e^{ik R=0} U\dagger (k+q) g(q,v) U(k)
-                     =\sum_k w(k) U\dagger g(0, v) U(k)
+                 =\sum_k w(k) U\dagger g(0, v) U(k)
 
         For q/=0. \delta\Delta=0.
         the result will be a matrix[nphon, nwann, nwann]

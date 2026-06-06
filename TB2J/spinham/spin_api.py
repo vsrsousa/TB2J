@@ -67,7 +67,7 @@ class SpinModel:
         kvectors=np.array(
             [[0, 0, 0], [0.5, 0, 0], [0.5, 0.5, 0], [0, 0, 0], [0.5, 0.5, 0.5]]
         ),
-        knames=["$\Gamma$", "X", "M", "$\Gamma$", "R"],
+        knames=[r"$\Gamma$", "X", "M", r"$\Gamma$", "R"],
         supercell_matrix=None,
         npoints=100,
         color="red",

@@ -191,7 +191,7 @@ def plot_M_vs_time(ham, supercell_matrix=np.eye(3), temperature=0):
     plt.plot(time, tspin[:, 1] / Ms, label="y")
     plt.plot(time, tspin[:, 2] / Ms, label="z")
     plt.xlabel("time (s)")
-    plt.ylabel("magnetic moment ($\mu_B$)")
+    plt.ylabel(r"magnetic moment ($\mu_B$)")
     plt.legend()
     # plt.show()
     # avg_total_m = np.average((np.linalg.norm(tspin, axis=1)/Ms)[:])
