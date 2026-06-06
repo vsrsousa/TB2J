@@ -324,8 +324,22 @@ class ExchangeCL2(ExchangeCL):
         GR_up = self.Gup.get_GR(self.short_Rlist, energy=e)
         GR_dn = self.Gdn.get_GR(self.short_Rlist, energy=e)
 
-        # Save diagonal elements of Green's functions for charge and magnetic moment calculation
-        self.save_greens_function_diagonals_collinear(GR_up, GR_dn)
+        # Extract diagonal elements of Green's functions for charge and magnetic
+        # moment calculation. Return them so the master can aggregate when
+        # running with multiprocessing.
+        G_up_diags = {}
+        G_dn_diags = {}
+        iR0 = 0
+        try:
+            iR0 = next(i for i, R in enumerate(self.short_Rlist) if tuple(R) == (0, 0, 0))
+        except Exception:
+            iR0 = 0
+        GR_up_R0 = GR_up[iR0]
+        GR_dn_R0 = GR_dn[iR0]
+        for iatom in range(len(self.atoms)):
+            orbi = self.iorb(iatom)
+            G_up_diags[iatom] = np.diag(GR_up_R0[np.ix_(orbi, orbi)])
+            G_dn_diags[iatom] = np.diag(GR_dn_R0[np.ix_(orbi, orbi)])
 
         # Use vectorized method with fallback to original method
         try:
@@ -334,7 +348,7 @@ class ExchangeCL2(ExchangeCL):
         except Exception as ex:
             print(f"Vectorized method failed: {ex}, falling back to original method")
             Jorb_list, JJ_list = self.get_all_A(GR_up, GR_dn)
-        return dict(Jorb_list=Jorb_list, JJ_list=JJ_list)
+        return dict(Jorb_list=Jorb_list, JJ_list=JJ_list, G_up_diags=G_up_diags, G_dn_diags=G_dn_diags)
 
     def save_greens_function_diagonals_collinear(self, GR_up, GR_dn):
         """
@@ -344,9 +358,16 @@ class ExchangeCL2(ExchangeCL):
         :param GR_up: Spin-up Green's function array of shape (nR, nbasis, nbasis)
         :param GR_dn: Spin-down Green's function array of shape (nR, nbasis, nbasis)
         """
+        # Determine index of R=0 (intra-atomic) in self.short_Rlist if available
+        iR0 = 0
+        try:
+            iR0 = next(i for i, R in enumerate(self.short_Rlist) if tuple(R) == (0, 0, 0))
+        except Exception:
+            iR0 = 0
+
         # Only need R=0 for diagonal elements (intra-atomic)
-        GR_up_R0 = GR_up[0]  # R=0 spin-up Green's function
-        GR_dn_R0 = GR_dn[0]  # R=0 spin-down Green's function
+        GR_up_R0 = GR_up[iR0]  # R=0 spin-up Green's function
+        GR_dn_R0 = GR_dn[iR0]  # R=0 spin-down Green's function
 
         for iatom in range(len(self.atoms)):
             # Get orbital indices for this atom
@@ -415,6 +436,11 @@ class ExchangeCL2(ExchangeCL):
         print("Green's function Calculation started.")
 
         npole = len(self.contour.path)
+        # Ensure storage for aggregated diagonals exists in master process
+        if not hasattr(self, "G_diagonal_up"):
+            self.G_diagonal_up = {iatom: [] for iatom in range(len(self.atoms))}
+        if not hasattr(self, "G_diagonal_dn"):
+            self.G_diagonal_dn = {iatom: [] for iatom in range(len(self.atoms))}
         if self.nproc == 1:
             results = map(
                 self.get_quantities_per_e, tqdm(self.contour.path, total=npole)
@@ -435,6 +461,15 @@ class ExchangeCL2(ExchangeCL):
                     key = (R_vec, iatom, jatom)
                     self.Jorb_list[key].append(Jorb_list[key])
                     self.JJ_list[key].append(JJ_list[key])
+            # Aggregate Green's diagonals returned by this worker result (if present)
+            if "G_up_diags" in result and "G_dn_diags" in result:
+                try:
+                    for iatom, gup in result["G_up_diags"].items():
+                        self.G_diagonal_up[iatom].append(gup)
+                    for iatom, gdn in result["G_dn_diags"].items():
+                        self.G_diagonal_dn[iatom].append(gdn)
+                except Exception:
+                    pass
         self.integrate()
         self.get_rho_atom()
 

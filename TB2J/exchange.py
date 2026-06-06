@@ -741,8 +741,21 @@ class ExchangeNCL(Exchange):
         # short_Rlist now contains actual R vectors
         GR = self.G.get_GR(self.short_Rlist, energy=e, Gk_all=Gk_all)
 
-        # Save diagonal elements of Green's function for charge and magnetic moment calculation
-        self.save_greens_function_diagonals(GR)
+        # Extract diagonal elements of Green's function for charge and magnetic
+        # moment calculation and return them so they can be aggregated by the
+        # master process when running in parallel.
+        G_diags = {}
+        # Determine index of R=0 (intra-atomic)
+        iR0 = 0
+        try:
+            iR0 = next(i for i, R in enumerate(self.short_Rlist) if tuple(R) == (0, 0, 0))
+        except Exception:
+            iR0 = 0
+        GR_R0 = GR[iR0]
+        for iatom in range(len(self.atoms)):
+            orbi = self.iorb(iatom)
+            G_diag = np.diag(GR_R0[np.ix_(orbi, orbi)])
+            G_diags[iatom] = G_diag
 
         # TODO: define the quantities for one energy.
         # Use vectorized method for better performance
@@ -753,7 +766,7 @@ class ExchangeNCL(Exchange):
         except Exception as e:
             print(f"Vectorized method failed: {e}, falling back to original method")
             AijR, AijR_orb = self.get_all_A(GR)
-        return dict(AijR=AijR, AijR_orb=AijR_orb, mae=mae)
+        return dict(AijR=AijR, AijR_orb=AijR_orb, mae=mae, G_diags=G_diags)
 
     def save_greens_function_diagonals(self, GR):
         """
@@ -762,8 +775,15 @@ class ExchangeNCL(Exchange):
 
         :param GR: Green's function array of shape (nR, nbasis, nbasis)
         """
+        # Determine index of R=0 (intra-atomic) in self.short_Rlist if available
+        iR0 = 0
+        try:
+            iR0 = next(i for i, R in enumerate(self.short_Rlist) if tuple(R) == (0, 0, 0))
+        except Exception:
+            iR0 = 0
+
         # Only need R=0 for diagonal elements (intra-atomic)
-        GR_R0 = GR[0]  # R=0 Green's function
+        GR_R0 = GR[iR0]  # R=0 Green's function
 
         for iatom in range(len(self.atoms)):
             # Get orbital indices for this atom
@@ -862,17 +882,13 @@ class ExchangeNCL(Exchange):
                             AijRs_orb[(R_vec, iatom, jatom)].append(
                                 result["AijR_orb"][(R_vec, iatom, jatom)]
                             )
-
-                    else:
-                        AijRs[(R_vec, iatom, jatom)] = []
-                        AijRs[(R_vec, iatom, jatom)].append(
-                            result["AijR"][(R_vec, iatom, jatom)]
-                        )
-                        if self.orb_decomposition:
-                            AijRs_orb[(R_vec, iatom, jatom)] = []
-                            AijRs_orb[(R_vec, iatom, jatom)].append(
-                                result["AijR_orb"][(R_vec, iatom, jatom)]
-                            )
+            # Aggregate Green's diagonals returned by this worker result (if present)
+            if "G_diags" in result:
+                try:
+                    for iatom, gdiag in result["G_diags"].items():
+                        self.G_diagonal[iatom].append(gdiag)
+                except Exception:
+                    pass
 
         # self.save_AijRs(AijRs)
         self.integrate(AijRs, AijRs_orb)
